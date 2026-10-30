@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>66AI Bot — 一号通行的全能 AI 助手桌面版</title>
+<meta name="description" content="66AI Bot 桌面版：一个 AI 团队工作台。登录 66AI 账号，¥98/月全能捆绑打通文本、文件分析、图像工作室、获客系统、GEO 等全部软件。Windows 立即下载。">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232563EB'/%3E%3Ctext x='32' y='42' font-size='26' font-weight='700' font-family='Arial' fill='%23fff' text-anchor='middle'%3E66%3C/text%3E%3C/svg%3E">
+<style>
+  :root{
+    --blue:#2563EB; --blue-d:#1D4ED8; --blue-l:#3B82F6;
+    --ink:#0B1220; --ink2:#111A2E; --card:#131F38;
+    --line:rgba(255,255,255,.08);
+    --txt:#E8EEF9; --sub:#9DB0CE;
+    --ok:#22C55E;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei","Segoe UI",sans-serif;
+    background:var(--ink); color:var(--txt); line-height:1.65;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:inherit;text-decoration:none}
+  .wrap{max-width:1120px;margin:0 auto;padding:0 24px}
+
+  /* ===== nav ===== */
+  nav{position:sticky;top:0;z-index:50;background:rgba(11,18,32,.82);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+  .nav-in{display:flex;align-items:center;justify-content:space-between;height:64px}
+  .logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:18px}
+  .logo-badge{width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,var(--blue),#7C3AED);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800}
+  .nav-links{display:flex;gap:28px;font-size:14px;color:var(--sub)}
+  .nav-links a:hover{color:#fff}
+  .nav-cta{background:var(--blue);padding:8px 18px;border-radius:10px;font-size:14px;font-weight:600;color:#fff}
+  .nav-cta:hover{background:var(--blue-d)}
+  @media(max-width:760px){.nav-links{display:none}}
+
+  /* ===== hero ===== */
+  .hero{position:relative;overflow:hidden;padding:88px 0 72px;
+    background:
+      radial-gradient(700px 320px at 18% -8%, rgba(37,99,235,.28), transparent 62%),
+      radial-gradient(640px 300px at 88% 6%, rgba(124,58,237,.18), transparent 60%),
+      var(--ink);}
+  .hero::before{content:"";position:absolute;inset:0;
+    background-image:linear-gradient(rgba(255,255,255,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.045) 1px,transparent 1px);
+    background-size:44px 44px;mask-image:radial-gradient(720px 420px at 30% 10%,#000 30%,transparent 75%);}
+  .hero-in{position:relative;display:grid;grid-template-columns:1.08fr .92fr;gap:56px;align-items:center}
+  .kicker{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:#A9C3FF;background:rgba(37,99,235,.14);border:1px solid rgba(37,99,235,.35);padding:6px 14px;border-radius:999px;margin-bottom:22px}
+  .kicker .dot{width:7px;height:7px;border-radius:50%;background:var(--ok);box-shadow:0 0 10px var(--ok)}
+  h1{font-size:46px;line-height:1.22;font-weight:800;letter-spacing:.5px}
+  h1 .grad{background:linear-gradient(92deg,#5B8CFF,#9F7CFF);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .hero p.lead{margin:18px 0 30px;font-size:17px;color:var(--sub);max-width:520px}
+  .hero-btns{display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+  .btn{display:inline-flex;align-items:center;gap:10px;font-weight:700;border-radius:12px;padding:14px 26px;font-size:16px;transition:.18s}
+  .btn-primary{background:linear-gradient(135deg,var(--blue),var(--blue-d));color:#fff;box-shadow:0 10px 30px rgba(37,99,235,.35)}
+  .btn-primary:hover{transform:translateY(-2px);box-shadow:0 14px 34px rgba(37,99,235,.45)}
+  .btn-ghost{border:1px solid rgba(255,255,255,.18);color:var(--txt);background:rgba(255,255,255,.04)}
+  .btn-ghost:hover{border-color:rgba(255,255,255,.4);background:rgba(255,255,255,.08)}
+  .hero-meta{margin-top:16px;font-size:13px;color:var(--sub)}
+  .hero-meta b{color:#C9D8F2}
+
+  /* app mockup */
+  .mock{background:linear-gradient(160deg,#16223C,#0E1730);border:1px solid rgba(255,255,255,.1);border-radius:16px;box-shadow:0 30px 70px rgba(0,0,0,.5),0 0 0 1px rgba(37,99,235,.12);overflow:hidden}
+  .mock-bar{display:flex;align-items:center;gap:7px;padding:12px 14px;border-bottom:1px solid var(--line);background:rgba(255,255,255,.03)}
+  .mock-bar i{width:11px;height:11px;border-radius:50%;display:block}
+  .mock-bar .r{background:#FF5F57}.mock-bar .y{background:#FEBC2E}.mock-bar .g{background:#28C840}
+  .mock-bar span{margin-left:10px;font-size:12px;color:var(--sub)}
+  .mock-body{display:grid;grid-template-columns:150px 1fr;min-height:300px}
+  .mock-side{border-right:1px solid var(--line);padding:14px 12px;font-size:12.5px;color:var(--sub);display:flex;flex-direction:column;gap:9px;background:rgba(0,0,0,.14)}
+  .mock-side .me{display:flex;align-items:center;gap:8px;color:#DCE7FA;font-weight:600;padding:8px;border-radius:9px;background:rgba(37,99,235,.16);border:1px solid rgba(37,99,235,.3)}
+  .mock-side .me em{width:20px;height:20px;border-radius:6px;background:linear-gradient(135deg,var(--blue),#7C3AED);display:flex;align-items:center;justify-content:center;font-size:9px;font-style:normal;color:#fff}
+  .mock-side .it{padding:7px 9px;border-radius:8px}
+  .mock-side .it.on{background:rgba(255,255,255,.06);color:#DCE7FA}
+  .mock-chat{padding:16px;display:flex;flex-direction:column;gap:12px;font-size:13px}
+  .bub{max-width:86%;padding:10px 13px;border-radius:12px}
+  .bub.bot{background:rgba(37,99,235,.16);border:1px solid rgba(37,99,235,.3);border-top-left-radius:4px}
+  .bub.user{background:rgba(255,255,255,.07);border:1px solid var(--line);align-self:flex-end;border-top-right-radius:4px}
+  .bub .t{display:block;font-size:10.5px;color:var(--sub);margin-bottom:3px}
+  .typing{display:inline-flex;gap:4px;padding:10px 13px;background:rgba(255,255,255,.05);border-radius:12px;align-self:flex-start}
+  .typing i{width:6px;height:6px;border-radius:50%;background:#5B8CFF;animation:bl 1.2s infinite}
+  .typing i:nth-child(2){animation-delay:.2s}.typing i:nth-child(3){animation-delay:.4s}
+  @keyframes bl{0%,80%{opacity:.25}40%{opacity:1}}
+
+  /* ===== sections ===== */
+  section{padding:84px 0}
+  .sec-head{text-align:center;margin-bottom:52px}
+  .sec-head h2{font-size:32px;font-weight:800}
+  .sec-head p{color:var(--sub);margin-top:12px;font-size:15.5px}
+  .eyebrow{font-size:13px;font-weight:700;letter-spacing:2px;color:#7FA4FF;text-transform:uppercase}
+
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:26px 24px;transition:.2s}
+  .card:hover{transform:translateY(-4px);border-color:rgba(37,99,235,.45);box-shadow:0 16px 40px rgba(0,0,0,.35)}
+  .card .ic{width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;background:rgba(37,99,235,.15);border:1px solid rgba(37,99,235,.3);margin-bottom:16px}
+  .card h3{font-size:17px;margin-bottom:9px}
+  .card p{font-size:14px;color:var(--sub)}
+
+  /* bundle */
+  .bundle{background:
+      radial-gradient(600px 260px at 50% 0%, rgba(37,99,235,.22), transparent 65%), var(--ink2);
+    border-block:1px solid var(--line)}
+  .price-card{max-width:640px;margin:0 auto;background:linear-gradient(170deg,#152447,#101B36);border:1px solid rgba(37,99,235,.4);border-radius:20px;padding:38px 40px;text-align:center;box-shadow:0 24px 60px rgba(0,0,0,.4)}
+  .price-card .tag{font-size:14px;font-weight:700;color:#9FC0FF;letter-spacing:1px}
+  .price{font-size:52px;font-weight:800;margin:10px 0 2px}
+  .price small{font-size:16px;font-weight:600;color:var(--sub)}
+  .price-card .save{display:inline-block;font-size:13px;color:#8AFFC1;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.35);padding:4px 12px;border-radius:999px;margin-bottom:22px}
+  .apps{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-bottom:28px}
+  .apps span{font-size:13.5px;padding:7px 15px;border-radius:10px;background:rgba(255,255,255,.05);border:1px solid var(--line);color:#C9D8F2}
+  .price-card .btn{width:100%;justify-content:center}
+  .price-note{margin-top:14px;font-size:12.5px;color:var(--sub)}
+
+  /* download */
+  .dl-box{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+  .dl-card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:32px;text-align:center}
+  .dl-card .os{font-size:40px;margin-bottom:12px}
+  .dl-card h3{font-size:20px;margin-bottom:6px}
+  .dl-card .v{font-size:13px;color:var(--sub);margin-bottom:22px}
+  .dl-card .btn{width:100%;justify-content:center}
+  .soon{display:inline-block;background:rgba(255,255,255,.05);border:1px solid var(--line);color:var(--sub);border-radius:12px;padding:14px 26px;font-weight:700;font-size:15px}
+  .dl-steps{max-width:640px;margin:36px auto 0;background:var(--ink2);border:1px solid var(--line);border-radius:14px;padding:22px 28px}
+  .dl-steps ol{margin-left:18px;font-size:14px;color:var(--sub);display:flex;flex-direction:column;gap:7px}
+  .dl-steps b{color:#C9D8F2}
+
+  /* faq */
+  .faq{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+  .qa{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px 24px}
+  .qa h3{font-size:15.5px;margin-bottom:8px;color:#DCE7FA}
+  .qa p{font-size:14px;color:var(--sub)}
+  .qa a{color:#7FA4FF;font-weight:600}
+
+  /* footer */
+  footer{border-top:1px solid var(--line);padding:44px 0 52px;background:#080E1A}
+  .foot{display:flex;justify-content:space-between;gap:30px;flex-wrap:wrap}
+  .foot .brand{max-width:320px}
+  .foot .brand p{font-size:13px;color:var(--sub);margin-top:10px}
+  .foot h4{font-size:14px;margin-bottom:12px;color:#DCE7FA}
+  .foot ul{list-style:none;display:flex;flex-direction:column;gap:8px;font-size:13.5px;color:var(--sub)}
+  .foot ul a:hover{color:#fff}
+  .copy{margin-top:36px;padding-top:20px;border-top:1px solid var(--line);font-size:12.5px;color:#6B7C99;text-align:center}
+
+  @media(max-width:960px){
+    .hero-in{grid-template-columns:1fr;gap:40px}
+    h1{font-size:36px}
+    .grid{grid-template-columns:1fr 1fr}
+    .dl-box{grid-template-columns:1fr}
+  }
+  @media(max-width:620px){
+    .grid{grid-template-columns:1fr}
+    section{padding:60px 0}
+    .price-card{padding:30px 22px}
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap nav-in">
+    <a class="logo" href="#"><span class="logo-badge">66</span>66AI Bot</a>
+    <div class="nav-links">
+      <a href="#features">产品优势</a>
+      <a href="#bundle">全能捆绑</a>
+      <a href="#download">下载</a>
+      <a href="#faq">常见问题</a>
+    </div>
+    <a class="nav-cta" href="https://cm.66ai.biz/pay">¥98/月 开通</a>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap hero-in">
+    <div>
+      <span class="kicker"><span class="dot"></span>Windows 版 0.2.5 现已发布</span>
+      <h1>一个 AI 团队<br>装进 <span class="grad">一个桌面应用</span></h1>
+      <p class="lead">66AI Bot 是 66AI 全能 AI 助手的桌面版。安装后登录你的 66AI 账号，主 Bot「66ai」帮你统筹任务、调用工具、记住你的偏好，还能随时创建多个专员分工协作。</p>
+      <div class="hero-btns">
+        <a class="btn btn-primary" href="https://dl.66ai.biz/66ai-bot-0.2.5-win-x64.exe">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+          Windows 立即下载
+        </a>
+        <a class="btn btn-ghost" href="https://cm.66ai.biz/pay">开通 ¥98/月 全能捆绑</a>
+      </div>
+      <p class="hero-meta">安装包 <b>278 MB</b> · 支持 <b>Windows 10/11 (x64)</b> · 登录即用，<b>macOS 版即将上线</b></p>
+    </div>
+
+    <div class="mock" aria-hidden="true">
+      <div class="mock-bar"><i class="r"></i><i class="y"></i><i class="g"></i><span>66AI Bot</span></div>
+      <div class="mock-body">
+        <div class="mock-side">
+          <div class="me"><em>66</em>66ai · 主 Bot</div>
+          <div class="it on">💬 每日对话</div>
+          <div class="it">📁 文件分析</div>
+          <div class="it">🎨 图像工作室</div>
+          <div class="it">📈 获客系统</div>
+          <div class="it">＋ 创建专员</div>
+        </div>
+        <div class="mock-chat">
+          <div class="bub bot"><span class="t">66ai</span>嘿，我是 66ai。需要拍板的事找我，剩下的我来安排。</div>
+          <div class="bub user"><span class="t">我</span>帮我把这周的订单表做一份汇总。</div>
+          <div class="bub bot"><span class="t">66ai</span>好的，已读取表格，正在生成汇总…</div>
+          <div class="typing"><i></i><i></i><i></i></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<section id="features">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="eyebrow">Why 66AI Bot</div>
+      <h2>为什么选 66AI Bot</h2>
+      <p>不只是聊天窗口，而是一个能干活、有记忆、会协作的 AI 团队工作台</p>
+    </div>
+    <div class="grid">
+      <div class="card">
+        <div class="ic">🤖</div>
+        <h3>AI 团队工作台</h3>
+        <p>主 Bot「66ai」统筹全局，任务拆解、指派专员、跟踪进度，像带一支随叫随到的数字团队。</p>
+      </div>
+      <div class="card">
+        <div class="ic">🧠</div>
+        <h3>长期记忆</h3>
+        <p>记住你的业务偏好与工作习惯，越用越懂你，不用每次从头交代背景。</p>
+      </div>
+      <div class="card">
+        <div class="ic">🗂️</div>
+        <h3>文件与数据</h3>
+        <p>表格、文档、截图直接丢给它：读取、分析、汇总、改写，一步到位。</p>
+      </div>
+      <div class="card">
+        <div class="ic">🛠️</div>
+        <h3>工具箱内置</h3>
+        <p>终端、浏览器、文件系统等工具开箱即用，Bot 能动手干活，不只会说话。</p>
+      </div>
+      <div class="card">
+        <div class="ic">🚀</div>
+        <h3>桌面原生体验</h3>
+        <p>安装即用，不依赖浏览器标签页；开机常驻，随叫随到，自动保持更新。</p>
+      </div>
+      <div class="card">
+        <div class="ic">🔑</div>
+        <h3>一号通行</h3>
+        <p>cm.66ai.biz 统一账号体系，一个账号登录 66AI 全系软件，套餐权益自动同步。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="bundle" class="bundle">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="eyebrow">All-in-one Bundle</div>
+      <h2>¥98/月，全能捆绑全软件通用</h2>
+      <p>买这一个套餐 = 66AI 全部软件通用，单买合计 ¥400/月</p>
+    </div>
+    <div class="price-card">
+      <div class="tag">⚡ 全能捆绑 · 全软件通用</div>
+      <div class="price">¥98<small>/月</small></div>
+      <div class="save">捆绑立省 ¥312/月</div>
+      <div class="apps">
+        <span>💬 文本对话</span>
+        <span>📄 文件分析</span>
+        <span>🎨 66AI 图像工作室</span>
+        <span>📈 66AI 获客系统</span>
+        <span>🌐 66AI GEO</span>
+        <span>🤖 CtrolAndroid</span>
+        <span>🏪 智铺ERP</span>
+      </div>
+      <a class="btn btn-primary" href="https://cm.66ai.biz/pay">立即订购 · 开通后自动同步</a>
+      <p class="price-note">包月期内全部无限使用 · 全平台统一账号一号通行 · 审核通过自动开通</p>
+    </div>
+  </div>
+</section>
+
+<section id="download">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="eyebrow">Download</div>
+      <h2>下载 66AI Bot</h2>
+      <p>下载 → 安装 → 登录 66AI 账号，三步开始使用</p>
+    </div>
+    <div class="dl-box">
+      <div class="dl-card">
+        <div class="os">🪟</div>
+        <h3>Windows 版</h3>
+        <div class="v">v0.2.5 · 278 MB · Windows 10/11 (x64)</div>
+        <a class="btn btn-primary" href="https://dl.66ai.biz/66ai-bot-0.2.5-win-x64.exe">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+          下载 Windows 安装包
+        </a>
+      </div>
+      <div class="dl-card">
+        <div class="os">🍎</div>
+        <h3>macOS 版</h3>
+        <div class="v">即将上线 · 支持 Intel 与 Apple Silicon</div>
+        <span class="soon">敬请期待</span>
+      </div>
+    </div>
+    <div class="dl-steps">
+      <ol>
+        <li><b>下载安装包</b>，双击运行，按提示完成安装。</li>
+        <li><b>启动 66AI Bot</b>，使用 66AI 账号登录（没有账号？<a href="https://cm.66ai.biz/pay" style="color:#7FA4FF">先去开通</a>）。</li>
+        <li><b>开始对话</b>：只有充值 ¥98/月「全能捆绑」套餐的账号可以使用，登录后自动生效。</li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+<section id="faq">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="eyebrow">FAQ</div>
+      <h2>常见问题</h2>
+    </div>
+    <div class="faq">
+      <div class="qa">
+        <h3>需要什么套餐才能使用？</h3>
+        <p>开通 ¥98/月「⚡ 全能捆绑 · 全软件通用」套餐即可使用 66AI Bot，同时打通 66AI 全系软件。前往 <a href="https://cm.66ai.biz/pay">cm.66ai.biz/pay</a> 订购，审核通过自动开通。</p>
+      </div>
+      <div class="qa">
+        <h3>在哪里注册和管理账号？</h3>
+        <p>统一账号体系：<a href="https://cm.66ai.biz/pay">cm.66ai.biz/pay</a> 注册并订购；<a href="https://cm.66ai.biz/admin">cm.66ai.biz/admin</a> 管理账号与套餐。一个账号，全平台通行。</p>
+      </div>
+      <div class="qa">
+        <h3>支持哪些系统？</h3>
+        <p>当前发布 Windows 10/11（x64）安装包；macOS（Intel 与 Apple Silicon）版本即将上线，敬请期待。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="foot">
+      <div class="brand">
+        <a class="logo" href="#"><span class="logo-badge">66</span>66AI Bot</a>
+        <p>一个 AI 团队，装进一个桌面应用。66AI 全能捆绑成员。</p>
+      </div>
+      <div>
+        <h4>获取 66AI Bot</h4>
+        <ul>
+          <li><a href="https://dl.66ai.biz/66ai-bot-0.2.5-win-x64.exe">Windows 下载 (v0.2.5)</a></li>
+          <li><a href="https://cm.66ai.biz/pay">订购 ¥98/月 全能捆绑</a></li>
+          <li><a href="https://cm.66ai.biz/admin">账号管理</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>66AI 产品矩阵</h4>
+        <ul>
+          <li><a href="https://3d.66ai.biz">66AI 官网</a></li>
+          <li><a href="https://geo.66ai.biz">66AI GEO</a></li>
+          <li><a href="https://find.66ai.biz">66AI 获客系统</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="copy">© 2026 66AI · 66AI Bot 桌面版</div>
+  </div>
+</footer>
+
+</body>
+</html>

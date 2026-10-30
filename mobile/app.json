@@ -1,0 +1,25 @@
+{
+  "expo": {
+    "name": "66AI Bot",
+    "slug": "66ai-bot",
+    "version": "0.1.0",
+    "orientation": "default",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "io.github.66ai-bot.66aibot"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0B1B3A",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "package": "io.github.66ai-bot.66aibot"
+    },
+    "scheme": "aibot"
+  }
+}

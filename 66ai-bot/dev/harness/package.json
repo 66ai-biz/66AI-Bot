@@ -1,0 +1,11 @@
+{
+  "name": "66ai-bot-test-harness",
+  "private": true,
+  "description": "The DeepSeek Harness packages that the unit tests and the linter run against. Install with npm run harness in 66ai-bot/.",
+  "dependencies": {
+    "@deepseek-ai/dsh": "0.2.1-rc.4",
+    "66ai-bot": "file:../..",
+    "jsdom": "29.1.1",
+    "oxlint": "1.76.0"
+  }
+}
