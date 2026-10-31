@@ -103,7 +103,7 @@ const introPage = `<!doctype html>
     <div class="feat"><b><em>🌐</em>联网与浏览器</b><p>每个 Bot 都能检索网页、操作浏览器，把线上信息带回工作台。</p></div>
   </section>
   <section class="plan">
-    <b>⚡ 66AI Bot · 98 元/月起</b>：开通 66AI Bot 包月套餐即可使用（98 元 1 个 Agent · 138 元 3 个 Agent · 198 元 6 个 Agent，第三方接口的 Agent 按套餐计入总数），内置 GLM 5.3 等多模型开箱即用，全平台统一账号一号通行。
+    <b>⚡ 66AI Bot · 98 元/月起</b>：开通 66AI Bot 包月套餐即可使用（98 元 1 个 Agent · 138 元 3 个 Agent · 198 元 10 个 Agent，第三方接口的 Agent 按套餐计入总数），内置 GLM 5.3 等多模型开箱即用，全平台统一账号一号通行。
     <div class="planNote">已开通？直接登录即可。还没有账号？点「购买套餐 / 开通账号」到统一账号站办理。</div>
   </section>
   <div class="row">
@@ -158,7 +158,7 @@ const paywallPage = (username, untilText) => `<!doctype html>
   <section class="plan">
     <b>⚡ 66AI Bot 基础版 · 98 元/月（1 个 Agent）</b><br>
     <b>⚡ 66AI Bot 包月 · 138 元/月（AIBot 专用 · 配置 3 个 Agent，含第三方共 5 个）</b><br>
-    <b>⚡ 66AI Bot 包月 Pro · 198 元/月（配置 6 个 Agent，第三方 Agent 不限量）</b><br>
+    <b>⚡ 66AI Bot 包月 Pro · 198 元/月（配置 10 个 Agent，第三方 Agent 不限量）</b><br>
     66AI Bot 桌面版：一台电脑上一整支 AI Bot 团队，内置 GLM 5.3 等多模型开箱即用，包月期内无限使用，模型 Key 由云端自动下发无需手动填写；审核通过自动开通，全平台统一账号一号通行。
     <div class="planNote">已开通的套餐：${untilText}。在统一账号站（cm.66ai.biz/pay）完成支付后，回到这里点「我已开通」。</div>
   </section>

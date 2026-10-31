@@ -983,8 +983,8 @@ test('a Pro plan leaves third-party Bots uncapped', async (t) => {
   t.after(stop)
   process.env.DSH_HOME = home
   t.after(() => { delete process.env.DSH_HOME })
-  // A 198-yuan plan: 6 on the official engine, no cap on the team (total 0).
-  writeFileSync(join(home, 'agent-limit.local'), `${JSON.stringify({ slots: 6, total: 0 })}\n`)
+  // A 198-yuan plan: 10 on the official engine, no cap on the team (total 0).
+  writeFileSync(join(home, 'agent-limit.local'), `${JSON.stringify({ slots: 10, total: 0 })}\n`)
   const third = 'deepseek/deepseek-v4-flash'
   for (let i = 1; i <= 7; i += 1) {
     assert.equal((await call('create-bot', { name: `T${i}`, model: third })).ok, true, `T${i}`)

@@ -94,7 +94,7 @@ const PAGE = `<!doctype html>
   </form>
   <p id="msg" class="msg" hidden></p>
   <button id="btnRegister" class="ghost" type="button">没有账号？购买套餐开通（cm.66ai.biz）</button>
-  <p class="foot">账号由 cm.66ai.biz 统一管理 · 使用需开通 66AI Bot 套餐（98 元 1 个 Agent · 138 元 3 个 Agent · 198 元 6 个 Agent）· 退出登录在侧栏账号卡片</p>
+  <p class="foot">账号由 cm.66ai.biz 统一管理 · 使用需开通 66AI Bot 套餐（98 元 1 个 Agent · 138 元 3 个 Agent · 198 元 10 个 Agent）· 退出登录在侧栏账号卡片</p>
 </main>
 <script>
 (function () {
