@@ -22,6 +22,7 @@ import { hostPort } from './host-port.mjs'
 import { HostProcess } from './host-process.mjs'
 import { copySessions, findTeam, importTeam, teamInUse, userDshHome } from './import.mjs'
 import { copyData, moveProblem } from './move-data.mjs'
+import { quarantineBrokenPatches } from './patch-guard.mjs'
 import { CHECK_PROFILE, PROFILE } from './profile.mjs'
 import { createShell, SHELL_TEXT } from './shell.mjs'
 import { UPDATE_TEXT, watchReleases, watchUpdates } from './updates.mjs'
@@ -185,6 +186,11 @@ async function start() {
   const where = await chooseLocations(choosing.signal).finally(() => { choosing = undefined })
   if (where.quit) { app.exit(0); return }
   places = { dataDir: where.dataDir, workspace: where.workspace }
+  // A corrupt overlay must not brick the boot: quarantine unparseable patch
+  // files (the seen failure mode is a zero-filled cordis.patch.yml) before
+  // anything — the Host, the import check — reads them. A quarantined user
+  // layer boots empty and the model preset re-applies on the first view.
+  quarantineBrokenPatches(where.dataDir)
   // The account session lives next to the app's data; the bridge answers from here on.
   configureAccount({ dataDir: where.dataDir })
   registerAccountIpc()
