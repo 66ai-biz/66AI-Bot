@@ -422,9 +422,12 @@ function syncRelayKeyFile() {
     const authed = state.authed === true
     const key = authed ? String(state.relayKey ?? '') : ''
     const slots = authed ? Math.max(0, Math.trunc(Number(state.agentSlots ?? 0))) : 0
+    // The team cap including third-party models; when the cloud says nothing about it,
+    // the legacy single cap takes its place (it counted the whole team).
+    const total = authed ? Math.max(0, Math.trunc(Number(state.agentSlotsTotal ?? state.agentSlots ?? 0))) : 0
     if (key === '') rmSync(join(places.dataDir, 'preset-key.local'), { force: true })
     else writeFileSync(join(places.dataDir, 'preset-key.local'), `${JSON.stringify({ key })}\n`)
-    writeFileSync(join(places.dataDir, 'agent-limit.local'), `${JSON.stringify({ slots })}\n`)
+    writeFileSync(join(places.dataDir, 'agent-limit.local'), `${JSON.stringify({ slots, total })}\n`)
   } catch (error) {
     console.error('66AI Bot: could not store the account entitlements', error)
   }

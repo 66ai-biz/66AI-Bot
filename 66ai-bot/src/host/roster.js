@@ -129,30 +129,67 @@ export function install(rt) {
     return `${stem} ${index}`
   }
 
-  // The agent slots the account's plan grants. The app keeps the number the cloud
-  // handed it in the data dir; a missing or non-positive file means no cap here.
-  function agentLimit() {
+  // The agent slots the account's plan grants. The app keeps the numbers the cloud
+  // handed it in the data dir: `slots` caps the Bots on the official 66ai engine,
+  // `total` caps the team including third-party models (0 = no cap). A missing or
+  // non-positive value means no cap on that side.
+  function agentLimits() {
     try {
       const file = process.env.DSH_HOME ? join(process.env.DSH_HOME, 'agent-limit.local') : ''
-      if (file === '') return 0
-      const slots = Math.trunc(Number(JSON.parse(readFileSync(file, 'utf8'))?.slots))
-      return Number.isFinite(slots) && slots > 0 ? slots : 0
-    } catch { return 0 }
+      if (file === '') return { official: 0, total: 0 }
+      const raw = JSON.parse(readFileSync(file, 'utf8')) ?? {}
+      const cap = (value) => {
+        const n = Math.trunc(Number(value))
+        return Number.isFinite(n) && n > 0 ? n : 0
+      }
+      const official = cap(raw.slots)
+      // Older files carry the old single cap, which counted the whole team.
+      const total = raw.total === undefined ? official : cap(raw.total)
+      return { official, total }
+    } catch { return { official: 0, total: 0 } }
+  }
+
+  // A Bot runs the official engine when its model belongs to the built-in 66ai
+  // provider; every other provider — bundled or user-added — counts as third-party.
+  const isOfficialModel = (ref) => String(ref ?? '').startsWith('ai66/')
+
+  // The model a new Bot would run on, as a `provider/model` ref: an explicit one
+  // resolves like the build does; a pick-later Bot has none, so it takes no official
+  // slot until the user actually picks an official model.
+  async function plannedModelRef(options) {
+    const raw = options?.model
+    if (raw !== undefined && raw !== null && String(raw).trim() !== '') return rt.resolveModel(String(raw))
+    if (options?.pickModel === true) return undefined
+    return await rt.defaultModel().catch(() => undefined)
   }
 
   // `pickModel` leaves the model to the user: the chat opens on a model card, and the
   // greeting waits until a model is chosen. So does a Bot made when no model is served.
   async function createBot(options) {
-    // The plan caps the team (the first Main Bot included in its count).
-    const limit = agentLimit()
-    if (limit > 0 && options?.main !== true && Object.keys(state.bots).length >= limit) {
-      throw new Error(`当前套餐最多可用 ${limit} 个 Agent（含首个），升级套餐可获得更多名额`)
-    }
     const cleanName = String(options.name ?? '').trim().slice(0, 40)
     const problem = nameProblem(cleanName)
     if (problem !== undefined) throw new Error(problem)
     if (botNameTaken(cleanName)) throw new Error(`A Bot named ${cleanName} already exists`)
-    return holdName('bot', cleanName, () => buildBot(cleanName, options))
+    return holdName('bot', cleanName, async () => {
+      // The plan caps the team. The first Main Bot is free; every other Bot counts
+      // against the total, and one on the official engine against the official slots.
+      // The check lives inside the hold: the awaits here must not open a window in
+      // which two concurrent creates could take the same name.
+      if (!(options?.main === true && state.mainBotIds.length === 0)) {
+        const { official, total } = agentLimits()
+        const modelRef = await plannedModelRef(options)
+        const nextOfficial = Object.values(state.bots).filter(bot => isOfficialModel(bot.model)).length
+          + (isOfficialModel(modelRef) ? 1 : 0)
+        const nextTotal = Object.keys(state.bots).length + 1
+        if (total > 0 && nextTotal > total) {
+          throw new Error(`当前套餐最多可用 ${total} 个 Agent（含第三方），升级套餐可获得更多名额`)
+        }
+        if (official > 0 && nextOfficial > official) {
+          throw new Error(`当前套餐最多可配置 ${official} 个官方（66AI）模型 Agent，可改用第三方接口的模型或升级套餐`)
+        }
+      }
+      return buildBot(cleanName, options)
+    })
   }
 
   async function buildBot(cleanName, { role = '', instructions = '', color, brief = '', createdBy, main = false, avatar, model, effort, workDir, copyOf, pickModel = false }) {
@@ -291,6 +328,15 @@ export function install(rt) {
     const modelRef = patch.model === undefined ? undefined
       : patch.model === null || patch.model === '' ? null
       : await rt.resolveModel(patch.model)
+    // Moving a Bot onto the official engine takes one of the plan's official slots;
+    // moves inside the third-party side — or off the official engine — only free one.
+    if (modelRef !== undefined && modelRef !== null && isOfficialModel(modelRef) && !isOfficialModel(bot.model)) {
+      const { official } = agentLimits()
+      const nextOfficial = Object.values(state.bots).filter(entry => isOfficialModel(entry.model)).length + 1
+      if (official > 0 && nextOfficial > official) {
+        throw new Error(`当前套餐最多可配置 ${official} 个官方（66AI）模型 Agent，可改用第三方接口的模型或升级套餐`)
+      }
+    }
     // A new level resolves against the model the Bot will run on: the new one, the
     // model it keeps, or — the model cleared — the one it last ran on.
     const effortRef = modelRef === undefined ? bot.model ?? bot.appliedModel : modelRef ?? bot.appliedModel

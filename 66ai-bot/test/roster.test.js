@@ -10,7 +10,7 @@ import { apply } from '../index.js'
 import { fakeContext } from './fake-ctx.js'
 
 // Enough of the dsh services for the roster to make Sessions; kickoff messages are dropped.
-function start(team, { models = [], reasoning = {}, archiveError, selection } = {}) {
+function start(team, { models = [], providers, reasoning = {}, archiveError, selection } = {}) {
   const home = mkdtempSync(join(tmpdir(), '66ai-bot-roster-'))
   if (team !== undefined) writeFileSync(join(home, 'state.json'), JSON.stringify(team))
   const ctx = fakeContext()
@@ -27,7 +27,7 @@ function start(team, { models = [], reasoning = {}, archiveError, selection } = 
   ctx.logger.warn = (...args) => warnings.push(format(...args))
   Object.assign(ctx, {
     llm: {
-      listProviders: () => (models.length > 0 ? [{ id: 'deepseek', name: 'DeepSeek' }] : []),
+      listProviders: () => (models.length > 0 ? (providers ?? [{ id: 'deepseek', name: 'DeepSeek' }]) : []),
       listModels: async () => models.map(id => ({ id })),
       resolveModelInfo: async (provider, model) => reasoning[`${provider}/${model}`] ?? {},
     },
@@ -941,5 +941,52 @@ test('a group\'s relay limit is a user setting the state view shows, and old lat
     const result = await call('update-room', { id: 'r1', relayLimit: bad })
     assert.equal(result.ok, false, JSON.stringify(bad))
     assert.match(result.error.message, /Relay limit must be a whole number from 1 to 200/)
+  }
+})
+
+test('the plan caps official and third-party Bots separately', async (t) => {
+  const { call, stop, home } = start(undefined, {
+    models: ['deepseek-v4-flash'],
+    providers: [{ id: 'deepseek', name: 'DeepSeek' }, { id: 'ai66', name: '66ai' }],
+  })
+  t.after(stop)
+  // The cap file lives in the data dir the runtime reaches through DSH_HOME.
+  process.env.DSH_HOME = home
+  t.after(() => { delete process.env.DSH_HOME })
+  // A 138-yuan plan: 3 Bots on the official engine, 5 including third-party ones.
+  writeFileSync(join(home, 'agent-limit.local'), `${JSON.stringify({ slots: 3, total: 5 })}\n`)
+  const official = 'ai66/deepseek-v4-flash'
+  const third = 'deepseek/deepseek-v4-flash'
+  // The seeded Main Bot has no model yet but already takes one slot of the total.
+  for (const name of ['A', 'B', 'C']) {
+    assert.equal((await call('create-bot', { name, model: official })).ok, true, name)
+  }
+  const fourth = await call('create-bot', { name: 'D', model: official })
+  assert.equal(fourth.ok, false)
+  assert.match(fourth.error.message, /最多可配置 3 个官方/)
+  // A third-party Bot still fits (Main + 3 official + 1 third = 5).
+  const thirdParty = (await call('create-bot', { name: 'T', model: third })).value
+  const full = await call('create-bot', { name: 'U', model: third })
+  assert.equal(full.ok, false)
+  assert.match(full.error.message, /最多可用 5 个 Agent（含第三方）/)
+  // Moving the third-party Bot onto the official engine would take a fourth official slot.
+  const moved = await call('update-bot', { id: thirdParty.id, model: official })
+  assert.equal(moved.ok, false)
+  assert.match(moved.error.message, /最多可配置 3 个官方/)
+})
+
+test('a Pro plan leaves third-party Bots uncapped', async (t) => {
+  const { call, stop, home } = start(undefined, {
+    models: ['deepseek-v4-flash'],
+    providers: [{ id: 'deepseek', name: 'DeepSeek' }, { id: 'ai66', name: '66ai' }],
+  })
+  t.after(stop)
+  process.env.DSH_HOME = home
+  t.after(() => { delete process.env.DSH_HOME })
+  // A 198-yuan plan: 6 on the official engine, no cap on the team (total 0).
+  writeFileSync(join(home, 'agent-limit.local'), `${JSON.stringify({ slots: 6, total: 0 })}\n`)
+  const third = 'deepseek/deepseek-v4-flash'
+  for (let i = 1; i <= 7; i += 1) {
+    assert.equal((await call('create-bot', { name: `T${i}`, model: third })).ok, true, `T${i}`)
   }
 })

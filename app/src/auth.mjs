@@ -110,6 +110,9 @@ function accountOf(data) {
     relayKey: typeof data?.relay_key === 'string' ? data.relay_key : undefined,
     // The agent slots the plan grants (the cloud computes them); undefined when unstated.
     agentSlots: Number.isFinite(Number(data?.agent_slots)) ? Math.max(0, Math.trunc(Number(data.agent_slots))) : undefined,
+    // The team cap including third-party models (0 = no cap); undefined when unstated,
+    // where the caller falls back to the single legacy cap.
+    agentSlotsTotal: Number.isFinite(Number(data?.agent_slots_total)) ? Math.max(0, Math.trunc(Number(data.agent_slots_total))) : undefined,
     isAdmin: data?.is_admin === true,
   }
 }
@@ -173,6 +176,9 @@ function keep(account, extra = {}) {
     subBotUntil: account.subBotUntil,
     relayKey: account.relayKey !== undefined ? account.relayKey : String(session.relayKey ?? ''),
     agentSlots: account.agentSlots !== undefined ? account.agentSlots : Math.max(0, Math.trunc(Number(session.agentSlots ?? 0))),
+    agentSlotsTotal: account.agentSlotsTotal !== undefined
+      ? account.agentSlotsTotal
+      : Math.max(0, Math.trunc(Number(session.agentSlotsTotal ?? session.agentSlots ?? 0))),
     isAdmin: account.isAdmin === true,
     spendPending: session.spendPending ?? {},
     ...extra,
@@ -223,6 +229,7 @@ export async function syncAccountPoints() {
     subBotUntil: String(entry.sub_aibot_until ?? session.subBotUntil ?? ''),
     ...(entry.relay_key === undefined ? {} : { relayKey: String(entry.relay_key) }),
     ...(entry.agent_slots === undefined ? {} : { agentSlots: Math.max(0, Math.trunc(Number(entry.agent_slots) || 0)) }),
+    ...(entry.agent_slots_total === undefined ? {} : { agentSlotsTotal: Math.max(0, Math.trunc(Number(entry.agent_slots_total) || 0)) }),
     spendPending: {},
     spendMaxId: Math.max(Number(session.spendMaxId ?? 0), spendMaxId),
   }
@@ -272,6 +279,7 @@ export function accountState() {
     subBotUntil: session.subBotUntil ?? '',
     relayKey: session.relayKey ?? '',
     agentSlots: Math.max(0, Math.trunc(Number(session.agentSlots ?? 0))),
+    agentSlotsTotal: Math.max(0, Math.trunc(Number(session.agentSlotsTotal ?? session.agentSlots ?? 0))),
     isAdmin: session.isAdmin === true,
     plan: planState(session),
   }
