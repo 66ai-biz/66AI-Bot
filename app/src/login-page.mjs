@@ -93,8 +93,8 @@ const PAGE = `<!doctype html>
     <button class="go" id="liGo" type="submit">登 录</button>
   </form>
   <p id="msg" class="msg" hidden></p>
-  <button id="btnRegister" class="ghost" type="button">没有账号？购买 138 元套餐开通（cm.66ai.biz）</button>
-  <p class="foot">账号由 cm.66ai.biz 统一管理 · 使用需开通 138 元/月 66AI Bot 套餐 · 退出登录在侧栏账号卡片</p>
+  <button id="btnRegister" class="ghost" type="button">没有账号？购买套餐开通（cm.66ai.biz）</button>
+  <p class="foot">账号由 cm.66ai.biz 统一管理 · 使用需开通 66AI Bot 套餐（98 元/月 1 个 Agent · 168 元/月 不限 Agent）· 退出登录在侧栏账号卡片</p>
 </main>
 <script>
 (function () {

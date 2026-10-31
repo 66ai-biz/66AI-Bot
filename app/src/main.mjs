@@ -401,7 +401,7 @@ const accountViewState = () => {
     : { authed: false }
 }
 
-// The subscription facts the paywall names: when the 138-yuan 66AI Bot plan runs out.
+// The subscription facts the paywall names: when the 66AI Bot plan runs out.
 function paywallText() {
   const state = accountState()
   const plan = state.plan ?? {}

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>66AI Bot — 一号通行的全能 AI 助手桌面版</title>
-<meta name="description" content="66AI Bot 桌面版：一个 AI 团队工作台。开通 ¥138/月 66AI Bot 套餐，内置 GLM 5.3 等多款模型，最多 5 个 Agent 协作。Windows 立即下载。">
+<meta name="description" content="66AI Bot 桌面版：一个 AI 团队工作台。¥98/月 1 个 Agent，¥168/月 Agent 数量不限，内置 GLM 5.3 等多款模型。Windows 立即下载。">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232563EB'/%3E%3Ctext x='32' y='42' font-size='26' font-weight='700' font-family='Arial' fill='%23fff' text-anchor='middle'%3E66%3C/text%3E%3C/svg%3E">
 <style>
   :root{
@@ -109,6 +109,18 @@
   .price-card .btn{width:100%;justify-content:center}
   .price-note{margin-top:14px;font-size:12.5px;color:var(--sub)}
 
+  /* bot plans (98 / 168) */
+  .plan-grid{display:grid;grid-template-columns:1fr 1fr;gap:26px;max-width:880px;margin:0 auto}
+  .bot-card{background:linear-gradient(170deg,#152447,#101B36);border:1px solid rgba(37,99,235,.4);border-radius:20px;padding:38px 36px;text-align:center;box-shadow:0 24px 60px rgba(0,0,0,.4);display:flex;flex-direction:column;align-items:center}
+  .bot-card.pro{border-color:rgba(124,58,237,.55);box-shadow:0 24px 60px rgba(124,58,237,.18)}
+  .bot-card .tag{font-size:14px;font-weight:700;color:#9FC0FF;letter-spacing:1px}
+  .bot-card.pro .tag{color:#C9B4FF}
+  .bot-card .hot{display:inline-block;font-size:12.5px;color:#FFD9A0;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.4);padding:4px 12px;border-radius:999px;margin-bottom:18px}
+  .bot-card ul{list-style:none;margin:6px 0 26px;text-align:left}
+  .bot-card li{font-size:14px;color:#C9D8F2;padding:5px 0}
+  .bot-card li::before{content:"✓ ";color:var(--ok);font-weight:700}
+  .bot-card .btn{width:100%;justify-content:center}
+
   /* download */
   .dl-box{display:grid;grid-template-columns:1fr 1fr;gap:20px}
   .dl-card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:32px;text-align:center}
@@ -148,6 +160,7 @@
     .grid{grid-template-columns:1fr}
     section{padding:60px 0}
     .price-card{padding:30px 22px}
+    .plan-grid{grid-template-columns:1fr}
   }
 </style>
 </head>
@@ -158,28 +171,29 @@
     <a class="logo" href="#"><span class="logo-badge">66</span>66AI Bot</a>
     <div class="nav-links">
       <a href="#features">产品优势</a>
+      <a href="#plans">套餐价格</a>
       <a href="#bundle">全能捆绑</a>
       <a href="#download">下载</a>
       <a href="#faq">常见问题</a>
     </div>
-    <a class="nav-cta" href="https://cm.66ai.biz/pay">¥138/月 开通</a>
+    <a class="nav-cta" href="https://cm.66ai.biz/pay">¥98/月 开通</a>
   </div>
 </nav>
 
 <header class="hero">
   <div class="wrap hero-in">
     <div>
-      <span class="kicker"><span class="dot"></span>Windows 版 0.2.6 现已发布</span>
+      <span class="kicker"><span class="dot"></span>Windows 版 0.2.7 现已发布</span>
       <h1>一个 AI 团队<br>装进 <span class="grad">一个桌面应用</span></h1>
-      <p class="lead">66AI Bot 是 66AI 全能 AI 助手的桌面版。开通 ¥138/月 套餐并登录，主 Bot「66ai」帮你统筹任务、调用工具、记住你的偏好，最多可创建 5 个专员分工协作。内置 GLM 5.3 等多款模型，Key 云端自动下发，无需手动填写。</p>
+      <p class="lead">66AI Bot 是 66AI 全能 AI 助手的桌面版。开通套餐并登录，主 Bot「66ai」帮你统筹任务、调用工具、记住你的偏好：¥98/月 1 个 Agent，¥168/月 Agent 数量不限。内置 GLM 5.3 等多款模型，Key 云端自动下发，无需手动填写。</p>
       <div class="hero-btns">
         <a class="btn btn-primary" href="https://dl.66ai.biz/download">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
           Windows 立即下载
         </a>
-        <a class="btn btn-ghost" href="https://cm.66ai.biz/pay">开通 ¥138/月 套餐</a>
+        <a class="btn btn-ghost" href="https://cm.66ai.biz/pay">开通套餐 · ¥98/月起</a>
       </div>
-      <p class="hero-meta">安装包 <b>278 MB</b> · 支持 <b>Windows 10/11 (x64)</b> · <b>¥138/月</b> 套餐用户登录即用 · <b>macOS 版即将上线</b></p>
+      <p class="hero-meta">安装包 <b>278 MB</b> · 支持 <b>Windows 10/11 (x64)</b> · <b>¥98/月起</b> 套餐用户登录即用 · <b>macOS 版即将上线</b></p>
     </div>
 
     <div class="mock" aria-hidden="true">
@@ -215,7 +229,7 @@
       <div class="card">
         <div class="ic">🤖</div>
         <h3>AI 团队工作台</h3>
-        <p>主 Bot「66ai」统筹全局，任务拆解、指派专员、跟踪进度，像带一支随叫随到的数字团队。¥138 套餐最多可创建 5 个 Agent 同时协作。</p>
+        <p>主 Bot「66ai」统筹全局，任务拆解、指派专员、跟踪进度，像带一支随叫随到的数字团队。¥168 Pro 档 Agent 数量不限。</p>
       </div>
       <div class="card">
         <div class="ic">🧠</div>
@@ -241,6 +255,45 @@
         <div class="ic">🔑</div>
         <h3>一号通行</h3>
         <p>cm.66ai.biz 统一账号体系，一个账号登录 66AI 全系软件，套餐权益自动同步。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="plans">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="eyebrow">Plans</div>
+      <h2>开通套餐，立即使用</h2>
+      <p>66AI Bot 包月两档任选，均内置 GLM 5.3 等多款模型，模型 Key 由云端自动下发，无需手动填写</p>
+    </div>
+    <div class="plan-grid">
+      <div class="bot-card">
+        <div class="tag">⚡ 66AI Bot 包月</div>
+        <div class="price">¥98<small>/月</small></div>
+        <ul>
+          <li>1 个 Agent（主 Bot「66ai」）</li>
+          <li>内置 GLM 5.3 等 6 款模型，开箱即用</li>
+          <li>长期记忆 · 文件与 Office · 联网与浏览器</li>
+          <li>包月期内无限使用</li>
+          <li>全平台统一账号一号通行</li>
+        </ul>
+        <a class="btn btn-primary" href="https://cm.66ai.biz/pay">订阅 66AI Bot 包月</a>
+        <p class="price-note">审核通过自动开通 · 随时可续</p>
+      </div>
+      <div class="bot-card pro">
+        <div class="tag">🚀 66AI Bot 包月 Pro</div>
+        <span class="hot">🔥 Agent 数量不限</span>
+        <div class="price">¥168<small>/月</small></div>
+        <ul>
+          <li>Agent 数量不限，团队规模随你组</li>
+          <li>内置 GLM 5.3 等 6 款模型，开箱即用</li>
+          <li>长期记忆 · 文件与 Office · 联网与浏览器</li>
+          <li>包月期内无限使用</li>
+          <li>全平台统一账号一号通行</li>
+        </ul>
+        <a class="btn btn-primary" href="https://cm.66ai.biz/pay">订阅 66AI Bot 包月 Pro</a>
+        <p class="price-note">审核通过自动开通 · 随时可续</p>
       </div>
     </div>
   </div>
@@ -283,7 +336,7 @@
       <div class="dl-card">
         <div class="os">🪟</div>
         <h3>Windows 版</h3>
-        <div class="v">v0.2.6 · 278 MB · Windows 10/11 (x64)</div>
+        <div class="v">v0.2.7 · 278 MB · Windows 10/11 (x64)</div>
         <a class="btn btn-primary" href="https://dl.66ai.biz/download">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
           下载 Windows 安装包
@@ -300,7 +353,7 @@
       <ol>
         <li><b>下载安装包</b>，双击运行，按提示完成安装。</li>
         <li><b>启动 66AI Bot</b>，使用 66AI 账号登录（尚未开通？<a href="https://cm.66ai.biz/pay" style="color:#7FA4FF">先去开通</a>）。</li>
-        <li><b>开始对话</b>：只有开通 ¥138/月「66AI Bot 包月」套餐的账号可以登录使用；模型 Key 由云端自动下发，登录后自动生效。</li>
+        <li><b>开始对话</b>：开通 66AI Bot 套餐（¥98/月 1 个 Agent · ¥168/月 不限 Agent）的账号可以登录使用；模型 Key 由云端自动下发，登录后自动生效。</li>
       </ol>
     </div>
   </div>
@@ -315,7 +368,7 @@
     <div class="faq">
       <div class="qa">
         <h3>需要什么套餐才能使用？</h3>
-        <p>开通 <a href="https://cm.66ai.biz/pay">¥138/月「66AI Bot 包月」套餐</a>即可登录使用 66AI Bot：内置 GLM 5.3 等多款模型（Key 云端自动下发），一台电脑最多 5 个 Agent 同时协作。¥98/月「全能捆绑」面向其余 66AI 软件。</p>
+        <p>开通 <a href="https://cm.66ai.biz/pay">66AI Bot 包月</a>即可登录使用：¥98/月 1 个 Agent；¥168/月 Pro 档 Agent 数量不限。均内置 GLM 5.3 等多款模型（Key 云端自动下发）。¥98/月「全能捆绑」面向其余 66AI 软件，两个 98 互不冲突。</p>
       </div>
       <div class="qa">
         <h3>在哪里注册和管理账号？</h3>
@@ -339,8 +392,8 @@
       <div>
         <h4>获取 66AI Bot</h4>
         <ul>
-          <li><a href="https://dl.66ai.biz/download">Windows 下载 (v0.2.6)</a></li>
-          <li><a href="https://cm.66ai.biz/pay">订购 ¥138/月 66AI Bot 套餐</a></li>
+          <li><a href="https://dl.66ai.biz/download">Windows 下载 (v0.2.7)</a></li>
+          <li><a href="https://cm.66ai.biz/pay">订购 66AI Bot 套餐（¥98/¥168）</a></li>
           <li><a href="https://cm.66ai.biz/admin">账号管理</a></li>
         </ul>
       </div>

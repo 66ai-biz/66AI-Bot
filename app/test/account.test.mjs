@@ -208,7 +208,7 @@ test('signing out keeps only the device id', async () => {
   rmSync(home, { recursive: true, force: true })
 })
 
-test('the plan gate is the 138-yuan 66AI Bot plan or an administrator', () => {
+test('the plan gate is a subscribed 66AI Bot plan or an administrator', () => {
   const today = auth.todayStamp()
   const year = '9999-12-31'
   // Without an account there is nothing to allow.

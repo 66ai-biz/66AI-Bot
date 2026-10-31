@@ -140,7 +140,7 @@ export function planState(account) {
   if (admin) return { allowed: true, admin, subBotUntil, subTextUntil, subAnalysisUntil }
   const today = todayStamp()
   return {
-    // The app's gate is the 138-yuan monthly 66AI Bot plan (the cloud's sub_aibot);
+    // The app's gate is a subscribed 66AI Bot monthly plan (the cloud's sub_aibot);
     // an administrator may use the app without one.
     allowed: subBotUntil >= today,
     admin,
