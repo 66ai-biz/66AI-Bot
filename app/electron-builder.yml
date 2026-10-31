@@ -72,5 +72,5 @@ linux:
 # so the build itself never publishes (--publish never).
 publish:
   provider: github
-  owner: 66AI
-  repo: 66ai-bot
+  owner: 66ai-biz
+  repo: 66AI-Bot
