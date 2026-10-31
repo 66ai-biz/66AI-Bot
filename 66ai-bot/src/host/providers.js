@@ -3,11 +3,54 @@
 // it, the route's key in DSH's credential store under the reference the route names.
 // The providers to add are the ones DSH's directory of configurable providers offers.
 
+import { readFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
 const PI_AI = 'llm-pi-ai'
 const ROUTE_ID = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/
 // The wire protocols DSH's pi-ai adapter serves on a route it ships nothing about.
 export const PROTOCOLS = ['openai-completions', 'openai-responses', 'anthropic-messages']
 const MAX_MODELS = 500
+
+// Providers that come preset for a fresh setup: the 66AI relay with the models it
+// serves. The relay key ships with the installer (preset-key.local next to this
+// module, never in the repository); a key the user set themselves always wins.
+const BUILTIN_PROVIDERS = [
+  {
+    provider: 'ai66',
+    name: '66ai',
+    api: 'openai-completions',
+    baseURL: 'https://api.66ai.biz/v1',
+    models: [
+      { id: 'z-ai/glm-5.3-flash', name: 'GLM 5.3' },
+      { id: 'minimaxai/minimax-m3.1-flash', name: 'MiniMax M3.1' },
+      { id: 'stepfun-ai/step-5-preview', name: 'Step 5' },
+      { id: 'deepseek-ai/deepseek-v4.1-flash', name: 'DeepSeek V4.1' },
+      { id: 'mistralai/mistral-large-4-1t-a52b', name: 'Mistral Large 4' },
+      { id: 'meta/muse-glimmer-30b', name: 'Muse Glimmer' },
+    ],
+  },
+]
+
+// The API key a preset provider ships with, read from a `preset-key.local` file the
+// repository ignores. Two homes: the app's data dir (the key the cloud handed the
+// signed-in account, kept current by the app) first, then the file beside this module
+// (a key baked in at packaging time). '' when neither is there.
+function presetKey(provider) {
+  if (!BUILTIN_PROVIDERS.some(item => item.provider === provider)) return ''
+  const homes = [
+    ...(process.env.DSH_HOME ? [join(process.env.DSH_HOME, 'preset-key.local')] : []),
+    join(dirname(fileURLToPath(import.meta.url)), 'preset-key.local'),
+  ]
+  for (const file of homes) {
+    try {
+      const parsed = JSON.parse(readFileSync(file, 'utf8'))
+      if (typeof parsed?.key === 'string' && parsed.key.trim() !== '') return parsed.key.trim()
+    } catch { /* this home has none; try the next */ }
+  }
+  return ''
+}
 
 // The reference DSH's own Models page derives for a route's key, so a provider added
 // here and one added there read the same key.
@@ -95,6 +138,7 @@ export function install(rt) {
   // can add. A provider with no key and no models (DeepSeek's account route before a
   // sign-in) is left out.
   async function providersView() {
+    await ensureBuiltinProviders()
     const found = seams()
     if (found === undefined) return { available: false }
     const map = sections(found.settings)
@@ -222,5 +266,58 @@ export function install(rt) {
     return providersView()
   }
 
+  // A fresh setup gets the preset providers automatically; whatever the user already
+  // has stays as it is. A preset lands only when genuinely missing, its route always
+  // names the key reference it would use (so its models honestly ask for a key until
+  // one is there), and the shipped key — a file the app keeps current — lands when no
+  // key is configured yet. A failure here never blocks a view. A host opts out with
+  // `builtinProviders: false`.
+  const addPreset = async (item, ref, key, map) => {
+    const { settings, credentials } = usable()
+    const profile = { displayName: item.name, api: item.api, baseURL: checkEndpoint(item.baseURL), models: item.models.map(modelEntry), apiKeyEnv: ref }
+    await settings.mutate(PI_AI, [{ op: 'set', path: ['providers', item.provider], value: profile }], map.get(PI_AI)?.revision)
+    if (key !== '') await credentials.set(ref, key)
+    rt.dropCatalog()
+  }
+
+  let ensuring
+  function ensureBuiltinProviders() {
+    const run = async () => {
+      if (rt.builtinProviders === false || seams() === undefined) return
+      try {
+        const { settings, credentials } = usable()
+        const map = sections(settings)
+        const current = map.get(PI_AI)?.value?.providers ?? {}
+        for (const item of BUILTIN_PROVIDERS) {
+          // A provider DSH itself ships (a settings namespace of its own) stays alone;
+          // a preset of ours lives as a pi-ai route and may need its key brought in.
+          const entry = entryOf(item.provider)
+          if (entry !== undefined && entry.settingsNs !== PI_AI) continue
+          const ref = keyRefFor(item.provider)
+          const held = await credentials.describe(ref).catch(() => undefined)
+          const key = held?.configured === true ? '' : presetKey(item.provider)
+          const profile = current[item.provider]
+          if (profile === undefined) {
+            await addPreset(item, ref, key, map)
+            continue
+          }
+          // The route already stands: name the key reference when it is missing, and
+          // bring the shipped key when none is configured. A key that is there wins.
+          if (profile.apiKeyEnv !== ref) {
+            await settings.mutate(PI_AI, [{ op: 'set', path: ['providers', item.provider], value: { ...profile, apiKeyEnv: ref } }], map.get(PI_AI)?.revision)
+            rt.dropCatalog()
+          }
+          if (key !== '') await credentials.set(ref, key)
+        }
+      } catch { /* a failed preset never blocks the providers page */ }
+    }
+    ensuring = (ensuring ?? Promise.resolve()).catch(() => {}).then(run)
+    return ensuring
+  }
+
   Object.assign(rt, { keyRefs, missingKeys, providersView, setProviderKey, clearProviderKey, addProvider, discoverModels, removeProvider })
+
+  // Land the presets as early as boot, so the first chat opens on a working model
+  // instead of waiting for the providers page.
+  ensureBuiltinProviders()
 }

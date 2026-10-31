@@ -2,8 +2,8 @@
 // - the product introduction, the app's home page before any sign-in (the one
 //   place that sells the product), whose sign-up button leads to the unified
 //   account site (cm.66ai.biz/pay) where accounts are registered and plans bought;
-// - the paywall, for a signed-in account without the required 98-yuan monthly
-//   plan (the cloud's 全能捆绑). Both talk through the `aibotAuth` bridge.
+// - the paywall, for a signed-in account without the required 138-yuan monthly
+//   plan (the cloud's 66AI Bot 套餐). Both talk through the `aibotAuth` bridge.
 
 const PLAN_URL = 'https://cm.66ai.biz/pay'
 
@@ -103,15 +103,15 @@ const introPage = `<!doctype html>
     <div class="feat"><b><em>🌐</em>联网与浏览器</b><p>每个 Bot 都能检索网页、操作浏览器，把线上信息带回工作台。</p></div>
   </section>
   <section class="plan">
-    <b>⚡ 全能捆绑 · 全软件通用 · 98 元/月</b>：买这一个 = 全部软件通用，包月期内全部无限使用，全平台统一账号一号通行。
-    <div class="planNote">已订阅？直接登录即可。还没有账号？点「注册 / 开通套餐」到统一账号站注册。</div>
+    <b>⚡ 66AI Bot · 138 元/月</b>：开通 138 元包月套餐即可使用，内置 GLM 5.3 等多模型开箱即用，全平台统一账号一号通行。
+    <div class="planNote">已开通？直接登录即可。还没有账号？点「购买套餐 / 开通账号」到统一账号站办理。</div>
   </section>
   <div class="row">
     <button class="go" id="btnLogin" type="button">登 录</button>
-    <button class="alt" id="btnRegister" type="button">注册 / 开通套餐</button>
+    <button class="alt" id="btnRegister" type="button">购买套餐 / 开通账号</button>
   </div>
   <p id="msg" class="msg" hidden></p>
-  <p class="foot">登录账号由 cm.66ai.biz 统一管理 · 全能捆绑 98 元/月，随时可续 · 支持 Windows 与 macOS</p>
+  <p class="foot">登录账号由 cm.66ai.biz 统一管理 · 套餐 138 元/月，随时可续 · 支持 Windows 与 macOS</p>
 </main>
 <script>
 (function () {
@@ -152,13 +152,13 @@ const paywallPage = (username, untilText) => `<!doctype html>
     <div class="logo">66</div>
     <div>
       <h1>开通套餐后使用</h1>
-      <p class="sub">账号 ${username} 已登录，但还没有 98 元/月全能捆绑套餐</p>
+      <p class="sub">账号 ${username} 已登录，但还没有 138 元/月 66AI Bot 套餐</p>
     </div>
   </div>
   <section class="plan">
-    <b>⚡ 全能捆绑 · 全软件通用 · 98 元/月</b><br>
-    买这一个 = 全部软件通用：文本 + 文件分析 + 66AI 图像工作室 (GIMP 插件) + 66AI 获客系统 + 66AI GEO + CtrolAndroid + 66AI ERP，包月期内全部无限使用；单买合计 ¥400/月，捆绑立省 ¥312；审核通过自动开通全部包月，全平台统一账号一号通行。
-    <div class="planNote">已开通的订阅：${untilText}。在统一账号站（cm.66ai.biz/pay）完成支付后，回到这里点「我已开通」。</div>
+    <b>⚡ 66AI Bot 包月 · 138 元/月</b><br>
+    66AI Bot 桌面版：一台电脑上一整支 AI Bot 团队，内置 GLM 5.3 等多模型开箱即用，包月期内无限使用，模型 Key 由云端自动下发无需手动填写；审核通过自动开通，全平台统一账号一号通行。
+    <div class="planNote">已开通的套餐：${untilText}。在统一账号站（cm.66ai.biz/pay）完成支付后，回到这里点「我已开通」。</div>
   </section>
   <div class="row">
     <button class="go" id="btnPay" type="button">去订阅 · cm.66ai.biz/pay</button>

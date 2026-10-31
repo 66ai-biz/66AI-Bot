@@ -2,7 +2,7 @@
 // The window loads the Host's loopback address as DSH Web does: DSH's sign-in sends the page's
 // origin as the address the browser comes back to, and accepts only a loopback one.
 import { app, BrowserWindow, WebContentsView, dialog, ipcMain, Menu, nativeImage, nativeTheme, powerMonitor, session, shell as electronShell, Tray } from 'electron'
-import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { readFile, rm } from 'node:fs/promises'
 import { release } from 'node:os'
 import { basename, dirname, isAbsolute, join, resolve } from 'node:path'
@@ -26,7 +26,7 @@ import { CHECK_PROFILE, PROFILE } from './profile.mjs'
 import { createShell, SHELL_TEXT } from './shell.mjs'
 import { UPDATE_TEXT, watchReleases, watchUpdates } from './updates.mjs'
 import { createDeferredPrompt } from './update-prompt.mjs'
-import { accountState, configureAccount, loginAccount, logoutAccount, planState, registerAccount, syncAccountPoints } from './auth.mjs'
+import { accountState, configureAccount, loginAccount, logoutAccount, planState, syncAccountPoints } from './auth.mjs'
 import { LOGIN_PAGE_URL } from './login-page.mjs'
 import { INTRO_PAGE_URL, paywallPageUrl } from './welcome-page.mjs'
 import { CAPTION_HEIGHT, cssColor, micaAvailable, nativeThemeSource } from './window-frame.mjs'
@@ -46,7 +46,7 @@ const IPC = {
   appUpdateState: '66ai-bot:app-update-state', appUpdateCheck: '66ai-bot:app-update-check',
   appUpdateInstall: '66ai-bot:app-update-install', appUpdateOpen: '66ai-bot:app-update-open',
   appUpdateChanged: '66ai-bot:app-update-changed',
-  authState: '66ai-bot:auth-state', authLogin: '66ai-bot:auth-login', authRegister: '66ai-bot:auth-register',
+  authState: '66ai-bot:auth-state', authLogin: '66ai-bot:auth-login',
   authLogout: '66ai-bot:auth-logout', accountChanged: '66ai-bot:account-changed',
   authShowLogin: '66ai-bot:auth-show-login', authOpen: '66ai-bot:auth-open', authCheckPlan: '66ai-bot:auth-check-plan',
 }
@@ -188,6 +188,9 @@ async function start() {
   // The account session lives next to the app's data; the bridge answers from here on.
   configureAccount({ dataDir: where.dataDir })
   registerAccountIpc()
+  // A saved session's relay key lands before the Host spawns, so the model preset
+  // reads it on the very first boot.
+  syncRelayKeyFile()
   const port = await hostPort(join(app.getPath('userData'), 'host-port.json'))
   origin = `http://127.0.0.1:${String(port)}`
   const pnpm = join(app.getAppPath(), 'node_modules', 'pnpm', 'bin', 'pnpm.mjs')
@@ -398,14 +401,33 @@ const accountViewState = () => {
     : { authed: false }
 }
 
-// The subscription facts the paywall names: when each part of the plan runs out.
+// The subscription facts the paywall names: when the 138-yuan 66AI Bot plan runs out.
 function paywallText() {
   const state = accountState()
   const plan = state.plan ?? {}
-  const untilText = (plan.subTextUntil || plan.subAnalysisUntil) !== ''
-    ? `文本包月至 ${plan.subTextUntil || '无'} · 文件分析包月至 ${plan.subAnalysisUntil || '无'}`
+  const untilText = (plan.subBotUntil || '') !== ''
+    ? `66AI Bot 套餐至 ${plan.subBotUntil}`
     : '暂无'
   return { username: state.username ?? '', untilText }
+}
+
+// The entitlements the cloud handed the signed-in account, parked where the Host's
+// plugins read them (the app's data dir = DSH_HOME): the relay key for the built-in
+// 66ai provider and the agent slots the plan grants. A logout clears the key and
+// zeroes the slots with the session.
+function syncRelayKeyFile() {
+  if (places === undefined) return
+  try {
+    const state = accountState()
+    const authed = state.authed === true
+    const key = authed ? String(state.relayKey ?? '') : ''
+    const slots = authed ? Math.max(0, Math.trunc(Number(state.agentSlots ?? 0))) : 0
+    if (key === '') rmSync(join(places.dataDir, 'preset-key.local'), { force: true })
+    else writeFileSync(join(places.dataDir, 'preset-key.local'), `${JSON.stringify({ key })}\n`)
+    writeFileSync(join(places.dataDir, 'agent-limit.local'), `${JSON.stringify({ slots })}\n`)
+  } catch (error) {
+    console.error('66AI Bot: could not store the account entitlements', error)
+  }
 }
 
 // The gate walks through the app's own pages until the account may in: the product
@@ -420,7 +442,10 @@ async function gateAccount(win) {
       syncAccountPoints().catch(() => ({ ok: false, network: true })),
       new Promise((resolve) => { const timer = setTimeout(() => resolve({ ok: false, network: true }), 3_000); timer.unref?.() }),
     ])
-    if (answer?.ok === true) view = accountViewState()
+    if (answer?.ok === true) {
+      syncRelayKeyFile()
+      view = accountViewState()
+    }
   }
   if (view.authed && view.plan?.allowed === true) {
     startAccountSync()
@@ -451,6 +476,7 @@ async function refreshAccount() {
   if (!accountViewState().authed) return
   const answer = await syncAccountPoints()
   if (!answer.ok && answer.network) return
+  syncRelayKeyFile()
   mainWindow?.webContents?.send?.(IPC.accountChanged, accountViewState())
 }
 
@@ -475,18 +501,9 @@ function registerAccountIpc() {
   ipcMain.handle(IPC.authLogin, async (event, payload) => {
     if (!fromOwnWindow(event)) return { ok: false, error: 'rejected' }
     const result = await loginAccount(payload?.username, payload?.password)
+    if (result.ok) syncRelayKeyFile()
     if (result.ok && !planState().allowed) {
       // A signed-in account without the plan stays at the gate: the paywall names it.
-      await mainWindow?.loadURL?.(paywallPageUrl(paywallText()))
-      return result
-    }
-    if (result.ok) resolveAccountGate()
-    return result
-  })
-  ipcMain.handle(IPC.authRegister, async (event, payload) => {
-    if (!fromOwnWindow(event)) return { ok: false, error: 'rejected' }
-    const result = await registerAccount(payload?.username, payload?.password, payload?.password2)
-    if (result.ok && !planState().allowed) {
       await mainWindow?.loadURL?.(paywallPageUrl(paywallText()))
       return result
     }
@@ -496,6 +513,7 @@ function registerAccountIpc() {
   ipcMain.handle(IPC.authLogout, (event) => {
     if (!fromOwnWindow(event)) return { ok: false }
     logoutAccount()
+    syncRelayKeyFile()
     // A fresh run asks for the account again at the gate.
     setTimeout(() => { app.relaunch(); app.exit(0) }, 300)
     return { ok: true }
@@ -518,6 +536,7 @@ function registerAccountIpc() {
     const synced = await syncAccountPoints()
     if (synced.network) return { ok: false, network: true }
     if (synced.ok !== true) return { ok: false, error: '账号状态确认失败，请重新登录后再试' }
+    syncRelayKeyFile()
     const state = planState()
     if (state.allowed) resolveAccountGate()
     return { ok: state.allowed }

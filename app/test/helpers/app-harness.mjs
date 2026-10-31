@@ -36,6 +36,7 @@ export const startApp = async ({ packaged = true } = {}) => {
     username: 'tester',
     points: { image: 0, video: 0, text: 100, analysis: 0, app: 0, universal: 0 },
     subTextUntil: '9999-12-31', subAnalysisUntil: '9999-12-31',
+    subBotUntil: '9999-12-31', relayKey: 'sk-harness', agentSlots: 5,
   }))
   process.env.CM_BASE_URL = 'http://127.0.0.1:1'
   hold()

@@ -208,7 +208,6 @@ function captionColors(mica) {
 contextBridge.exposeInMainWorld('aibotAuth', {
   state: () => ipcRenderer.invoke('66ai-bot:auth-state'),
   login: (username, password) => ipcRenderer.invoke('66ai-bot:auth-login', { username: String(username ?? ''), password: String(password ?? '') }),
-  register: (username, password, password2) => ipcRenderer.invoke('66ai-bot:auth-register', { username: String(username ?? ''), password: String(password ?? ''), password2: String(password2 ?? '') }),
   logout: () => ipcRenderer.invoke('66ai-bot:auth-logout'),
   // The introduction page's step into the sign-in form, the sign-up link to the
   // unified account site, and the paywall's re-check after a purchase.

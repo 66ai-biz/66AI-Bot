@@ -12,7 +12,7 @@
 // All three answer JSON and share the client secret of the deployment.
 
 import { randomUUID } from 'node:crypto'
-import { hostname, homedir } from 'node:os'
+import { homedir } from 'node:os'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
@@ -105,6 +105,11 @@ function accountOf(data) {
     points,
     subTextUntil: String(data?.sub_text_until ?? ''),
     subAnalysisUntil: String(data?.sub_analysis_until ?? ''),
+    subBotUntil: String(data?.sub_aibot_until ?? ''),
+    // undefined: the cloud said nothing (an older answer); '' : it said there is none.
+    relayKey: typeof data?.relay_key === 'string' ? data.relay_key : undefined,
+    // The agent slots the plan grants (the cloud computes them); undefined when unstated.
+    agentSlots: Number.isFinite(Number(data?.agent_slots)) ? Math.max(0, Math.trunc(Number(data.agent_slots))) : undefined,
     isAdmin: data?.is_admin === true,
   }
 }
@@ -127,15 +132,19 @@ export function planState(account) {
   const source = account ?? loadSession()
   const subTextUntil = String(source?.subTextUntil ?? '')
   const subAnalysisUntil = String(source?.subAnalysisUntil ?? '')
+  const subBotUntil = String(source?.subBotUntil ?? '')
   const admin = source?.isAdmin === true
   if (typeof source?.username !== 'string' || source.username === '') {
-    return { allowed: false, admin, subTextUntil, subAnalysisUntil }
+    return { allowed: false, admin, subBotUntil, subTextUntil, subAnalysisUntil }
   }
-  if (admin) return { allowed: true, admin, subTextUntil, subAnalysisUntil }
+  if (admin) return { allowed: true, admin, subBotUntil, subTextUntil, subAnalysisUntil }
   const today = todayStamp()
   return {
-    allowed: subTextUntil >= today && subAnalysisUntil >= today,
+    // The app's gate is the 138-yuan monthly 66AI Bot plan (the cloud's sub_aibot);
+    // an administrator may use the app without one.
+    allowed: subBotUntil >= today,
     admin,
+    subBotUntil,
     subTextUntil,
     subAnalysisUntil,
   }
@@ -161,6 +170,9 @@ function keep(account, extra = {}) {
     points: account.points,
     subTextUntil: account.subTextUntil,
     subAnalysisUntil: account.subAnalysisUntil,
+    subBotUntil: account.subBotUntil,
+    relayKey: account.relayKey !== undefined ? account.relayKey : String(session.relayKey ?? ''),
+    agentSlots: account.agentSlots !== undefined ? account.agentSlots : Math.max(0, Math.trunc(Number(session.agentSlots ?? 0))),
     isAdmin: account.isAdmin === true,
     spendPending: session.spendPending ?? {},
     ...extra,
@@ -178,44 +190,6 @@ export async function loginAccount(username, password) {
   if (answer.network) return { ok: false, network: true, error: '无法连接账号服务，请检查网络' }
   if (!answer.ok) return { ok: false, error: answer.error ?? '用户名或密码错误' }
   return keep(answer.account)
-}
-
-/**
- * Create the account on the cloud (which mirrors it into the unified user list
- * with the standard trial points) and sign in with it. A name that already
- * exists signs in instead when the password matches; a client account whose
- * password differs gets its password recalibrated to the one entered here —
- * that is the cloud's own client protocol.
- */
-export async function registerAccount(username, password, password2) {
-  const name = String(username ?? '').trim()
-  const pass = String(password ?? '')
-  if (name === '' || pass === '') return { ok: false, error: '请输入用户名和密码' }
-  if (name.length > 32 || pass.length > 64) return { ok: false, error: '用户名或密码过长' }
-  if (pass !== String(password2 ?? '')) return { ok: false, error: '两次输入的密码不一致' }
-  // An existing name with the right password is just a sign-in.
-  const probe = await remoteLogin(name, pass)
-  if (probe.network) return { ok: false, network: true, error: '无法连接账号服务，请检查网络' }
-  if (probe.ok) return keep(probe.account, { existed: true })
-  const report = await postJson('/api/report_register', {
-    username: name,
-    password: pass,
-    hostname: hostname(),
-    reg_ip: '',
-    device_id: deviceId(),
-    trial: TRIAL_TOTAL,
-  })
-  if (report.network) return { ok: false, network: true, error: '无法连接账号服务，请检查网络' }
-  if (report.status === 403) return { ok: false, error: '账号服务拒绝了本次注册' }
-  if (report.status === 429) return { ok: false, error: '注册过于频繁，请稍后再试' }
-  if (report.status !== 200 || report.data?.ok !== true) {
-    return { ok: false, error: String(report.data?.error ?? '注册失败，请稍后再试') }
-  }
-  // The register report is quiet about an existing name; the sign-in tells the truth.
-  const confirm = await remoteLogin(name, pass)
-  if (confirm.network) return { ok: false, network: true, error: '账号已创建，但登录校验失败，请稍后重试' }
-  if (!confirm.ok) return { ok: false, error: '用户名已存在且密码不同，请换一个用户名或直接登录' }
-  return keep(confirm.account, { created: true })
 }
 
 /**
@@ -246,6 +220,9 @@ export async function syncAccountPoints() {
     points,
     subTextUntil: String(entry.sub_text_until ?? session.subTextUntil ?? ''),
     subAnalysisUntil: String(entry.sub_analysis_until ?? session.subAnalysisUntil ?? ''),
+    subBotUntil: String(entry.sub_aibot_until ?? session.subBotUntil ?? ''),
+    ...(entry.relay_key === undefined ? {} : { relayKey: String(entry.relay_key) }),
+    ...(entry.agent_slots === undefined ? {} : { agentSlots: Math.max(0, Math.trunc(Number(entry.agent_slots) || 0)) }),
     spendPending: {},
     spendMaxId: Math.max(Number(session.spendMaxId ?? 0), spendMaxId),
   }
@@ -292,6 +269,9 @@ export function accountState() {
     points: { ...session.points },
     subTextUntil: session.subTextUntil ?? '',
     subAnalysisUntil: session.subAnalysisUntil ?? '',
+    subBotUntil: session.subBotUntil ?? '',
+    relayKey: session.relayKey ?? '',
+    agentSlots: Math.max(0, Math.trunc(Number(session.agentSlots ?? 0))),
     isAdmin: session.isAdmin === true,
     plan: planState(session),
   }

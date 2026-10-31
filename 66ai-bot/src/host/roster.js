@@ -1,6 +1,8 @@
 // Roster: creating, changing, and deleting Bots and group chats, the Main Bot role, and
 // the first Main Bot of a new team.
 import { mkdir } from 'node:fs/promises'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { MAX_AVATAR_IMAGE, ROOM_MAX_MEMBERS, ROOM_MODES, ROOM_NAME_MAX, ROOM_NOTICE_MAX } from './constants.js'
 import { currentColor, isColor, normalize, unquote } from './text.js'
 import { nameProblem } from '../shared/mentions.js'
@@ -127,9 +129,25 @@ export function install(rt) {
     return `${stem} ${index}`
   }
 
+  // The agent slots the account's plan grants. The app keeps the number the cloud
+  // handed it in the data dir; a missing or non-positive file means no cap here.
+  function agentLimit() {
+    try {
+      const file = process.env.DSH_HOME ? join(process.env.DSH_HOME, 'agent-limit.local') : ''
+      if (file === '') return 0
+      const slots = Math.trunc(Number(JSON.parse(readFileSync(file, 'utf8'))?.slots))
+      return Number.isFinite(slots) && slots > 0 ? slots : 0
+    } catch { return 0 }
+  }
+
   // `pickModel` leaves the model to the user: the chat opens on a model card, and the
   // greeting waits until a model is chosen. So does a Bot made when no model is served.
   async function createBot(options) {
+    // The plan caps the team (the first Main Bot included in its count).
+    const limit = agentLimit()
+    if (limit > 0 && options?.main !== true && Object.keys(state.bots).length >= limit) {
+      throw new Error(`当前套餐最多可用 ${limit} 个 Agent（含首个），升级套餐可获得更多名额`)
+    }
     const cleanName = String(options.name ?? '').trim().slice(0, 40)
     const problem = nameProblem(cleanName)
     if (problem !== undefined) throw new Error(problem)

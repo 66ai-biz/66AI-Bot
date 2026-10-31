@@ -16,9 +16,10 @@ process.env.CM_SECRET = 'e2e-secret'
 const SECRET = process.env.CM_SECRET
 const TRIAL = { image: 15, video: 200, text: 10, analysis: 10, app: 10 }
 
-// The mock keeps the cloud's shapes: one user map, the remote register report with its
-// mirror semantics (create with trial; recalibrate a client user's password; never touch
-// a web or admin user), and the idempotent points watermark.
+// The mock keeps the cloud's shapes: one user map (accounts are created on the web
+// side or by the admin, never from the desktop app) and the idempotent points
+// watermark. A user carries the subscription stamps, the relay key and the agent
+// slots the way the live cloud hands them over.
 const users = new Map()
 const watermark = new Map()
 let failNext = false
@@ -38,15 +39,12 @@ const server = createServer((request, response) => {
     if (request.url === '/api/client/remote_login') {
       const user = users.get(String(data.username ?? ''))
       if (!user || user.password !== String(data.password ?? '')) return json(response, 401, { ok: false, error: '用户名或密码错误' })
-      return json(response, 200, { ok: true, username: user.username, ...pointsWire(user), sub_text_until: '', sub_analysis_until: '' })
-    }
-    if (request.url === '/api/report_register') {
-      const name = String(data.username ?? '').trim()
-      if (name === '') return json(response, 400, { ok: false, error: 'bad payload' })
-      const known = users.get(name)
-      if (!known) users.set(name, { username: name, password: String(data.password ?? ''), source: 'client', points: { ...TRIAL, universal: 0 } })
-      else if (known.source === 'client') known.password = String(data.password ?? '')
-      return json(response, 200, { ok: true })
+      return json(response, 200, {
+        ok: true, username: user.username, ...pointsWire(user),
+        sub_text_until: user.subTextUntil ?? '', sub_analysis_until: '',
+        sub_aibot_until: user.subBotUntil ?? '', relay_key: user.relayKey ?? '',
+        agent_slots: user.agentSlots ?? 0,
+      })
     }
     if (request.url === '/api/client/points_sync') {
       const out = {}
@@ -62,7 +60,12 @@ const server = createServer((request, response) => {
             if (amount < 0) user.points[key] = (user.points[key] ?? 0) + amount
           }
         }
-        out[user.username] = { exists: true, balances: { ...user.points }, sub_text_until: '', sub_analysis_until: '' }
+        out[user.username] = {
+          exists: true, balances: { ...user.points },
+          sub_text_until: user.subTextUntil ?? '', sub_analysis_until: '',
+          sub_aibot_until: user.subBotUntil ?? '', relay_key: user.relayKey ?? '',
+          agent_slots: user.agentSlots ?? 0,
+        }
       }
       return json(response, 200, { ok: true, users: out })
     }
@@ -80,38 +83,16 @@ const port = await new Promise((resolve) => {
 })
 process.env.CM_BASE_URL = `http://127.0.0.1:${String(port)}`
 
+// Seeded before the module import so the first sign-in finds them.
+users.set('amy', { username: 'amy', password: 'secret-one', source: 'client', points: { ...TRIAL, universal: 0 }, subBotUntil: '9999-12-31', relayKey: 'sk-amy-relay', agentSlots: 5 })
+users.set('lone', { username: 'lone', password: 'secret-one', source: 'client', points: { ...TRIAL, universal: 0 }, subBotUntil: '', relayKey: '', agentSlots: 0 })
+
 const auth = await import('../src/auth.mjs')
 
 const homeOf = (name) => {
   const dir = mkdtempSync(join(tmpdir(), `aibot-account-${name}-`))
   return dir
 }
-
-test('register creates the cloud account with the trial points and signs in', async () => {
-  const home = homeOf('new')
-  auth.configureAccount({ dataDir: home })
-  const result = await auth.registerAccount('  amy ', 'secret-one', 'secret-one')
-  assert.equal(result.ok, true)
-  assert.equal(result.created, true)
-  assert.equal(result.account.username, 'amy')
-  assert.deepEqual(result.account.points, { ...TRIAL, universal: 0 })
-  // The session carries the account and the points.
-  const session = JSON.parse(readFileSync(join(home, 'account.json'), 'utf8'))
-  assert.equal(session.username, 'amy')
-  assert.equal(session.points.video, 200)
-  assert.equal(typeof session.deviceId, 'string')
-  rmSync(home, { recursive: true, force: true })
-})
-
-test('a register with mismatched passwords stops before the network', async () => {
-  const home = homeOf('mismatch')
-  auth.configureAccount({ dataDir: home })
-  const result = await auth.registerAccount('bob', 'secret-one', 'secret-two')
-  assert.equal(result.ok, false)
-  assert.equal(result.error, '两次输入的密码不一致')
-  assert.equal(users.has('bob'), false)
-  rmSync(home, { recursive: true, force: true })
-})
 
 test('sign-in checks the password against the cloud and stores the session', async () => {
   const home = homeOf('login')
@@ -126,42 +107,27 @@ test('sign-in checks the password against the cloud and stores the session', asy
   rmSync(home, { recursive: true, force: true })
 })
 
-test('registering an existing name with the right password signs in instead', async () => {
-  const home = homeOf('again')
+test('sign-in carries the relay key, the plan stamp and the agent slots', async () => {
+  const home = homeOf('entitlements')
   auth.configureAccount({ dataDir: home })
-  const result = await auth.registerAccount('amy', 'secret-one', 'secret-one')
+  const result = await auth.loginAccount('amy', 'secret-one')
   assert.equal(result.ok, true)
-  assert.equal(result.existed, true)
-  rmSync(home, { recursive: true, force: true })
-})
-
-test('a register report over a client account recalibrates its password', async () => {
-  const home = homeOf('recalibrate')
-  auth.configureAccount({ dataDir: home })
-  const result = await auth.registerAccount('amy', 'secret-two', 'secret-two')
-  assert.equal(result.ok, true)
-  // The old password is gone, the new one signs in.
-  const old = await auth.loginAccount('amy', 'secret-one')
-  assert.equal(old.ok, false)
-  const fresh = await auth.loginAccount('amy', 'secret-two')
-  assert.equal(fresh.ok, true)
-  rmSync(home, { recursive: true, force: true })
-})
-
-test('a web account of the cloud keeps its password', async () => {
-  users.set('cara', { username: 'cara', password: 'web-secret', source: 'web', points: { ...TRIAL, universal: 0 } })
-  const home = homeOf('web')
-  auth.configureAccount({ dataDir: home })
-  const result = await auth.registerAccount('cara', 'hijack', 'hijack')
-  assert.equal(result.ok, false)
-  assert.equal(users.get('cara').password, 'web-secret')
+  assert.equal(result.account.subBotUntil, '9999-12-31')
+  assert.equal(result.account.relayKey, 'sk-amy-relay')
+  assert.equal(result.account.agentSlots, 5)
+  const session = JSON.parse(readFileSync(join(home, 'account.json'), 'utf8'))
+  assert.equal(session.relayKey, 'sk-amy-relay')
+  assert.equal(session.agentSlots, 5)
+  // The account state hands both to the app, which parks them for the Host.
+  assert.equal(auth.accountState().relayKey, 'sk-amy-relay')
+  assert.equal(auth.accountState().agentSlots, 5)
   rmSync(home, { recursive: true, force: true })
 })
 
 test('the sync pulls the balances the admin changed on the cloud', async () => {
   const home = homeOf('sync')
   auth.configureAccount({ dataDir: home })
-  await auth.loginAccount('amy', 'secret-two')
+  await auth.loginAccount('amy', 'secret-one')
   users.get('amy').points.text = 500
   users.get('amy').points.universal = 88
   const answer = await auth.syncAccountPoints()
@@ -172,10 +138,25 @@ test('the sync pulls the balances the admin changed on the cloud', async () => {
   rmSync(home, { recursive: true, force: true })
 })
 
+test('the sync follows a rotated relay key, a new plan stamp and new agent slots', async () => {
+  const home = homeOf('rotate')
+  auth.configureAccount({ dataDir: home })
+  await auth.loginAccount('amy', 'secret-one')
+  users.get('amy').relayKey = 'sk-rotated'
+  users.get('amy').subBotUntil = '2099-01-31'
+  users.get('amy').agentSlots = 3
+  const answer = await auth.syncAccountPoints()
+  assert.equal(answer.ok, true)
+  assert.equal(auth.accountState().relayKey, 'sk-rotated')
+  assert.equal(auth.accountState().subBotUntil, '2099-01-31')
+  assert.equal(auth.accountState().agentSlots, 3)
+  rmSync(home, { recursive: true, force: true })
+})
+
 test('a recorded spend pushes once and a lost answer cannot deduct twice', async () => {
   const home = homeOf('spend')
   auth.configureAccount({ dataDir: home })
-  await auth.loginAccount('amy', 'secret-two')
+  await auth.loginAccount('amy', 'secret-one')
   const before = users.get('amy').points.text
   assert.equal(auth.recordSpend({ text: -3, nonsense: -9, positive: 5 }), true)
   const first = await auth.syncAccountPoints()
@@ -199,7 +180,7 @@ test('a recorded spend pushes once and a lost answer cannot deduct twice', async
 test('an unreachable account service answers as a network failure', async () => {
   const home = homeOf('network')
   auth.configureAccount({ dataDir: home })
-  await auth.loginAccount('amy', 'secret-two')
+  await auth.loginAccount('amy', 'secret-one')
   const lastKnown = auth.accountState().points.text
   server.close()
   try {
@@ -217,7 +198,7 @@ test('an unreachable account service answers as a network failure', async () => 
 test('signing out keeps only the device id', async () => {
   const home = homeOf('logout')
   auth.configureAccount({ dataDir: home })
-  await auth.loginAccount('amy', 'secret-two')
+  await auth.loginAccount('amy', 'secret-one')
   const deviceId = JSON.parse(readFileSync(join(home, 'account.json'), 'utf8')).deviceId
   auth.logoutAccount()
   const session = JSON.parse(readFileSync(join(home, 'account.json'), 'utf8'))
@@ -227,27 +208,27 @@ test('signing out keeps only the device id', async () => {
   rmSync(home, { recursive: true, force: true })
 })
 
-test('the plan gate takes both subscriptions or an administrator', () => {
+test('the plan gate is the 138-yuan 66AI Bot plan or an administrator', () => {
   const today = auth.todayStamp()
   const year = '9999-12-31'
   // Without an account there is nothing to allow.
   assert.equal(auth.planState({ username: '' }).allowed, false)
   assert.equal(auth.planState(undefined).allowed, false)
-  // The plan is the pair: one subscription alone does not open the app.
-  assert.equal(auth.planState({ username: 'a', subTextUntil: year, subAnalysisUntil: year }).allowed, true)
-  assert.equal(auth.planState({ username: 'a', subTextUntil: year, subAnalysisUntil: '' }).allowed, false)
-  assert.equal(auth.planState({ username: 'a', subTextUntil: '', subAnalysisUntil: year }).allowed, false)
-  // Subscriptions read as valid through their expiry day, the cloud's own comparison.
-  assert.equal(auth.planState({ username: 'a', subTextUntil: today, subAnalysisUntil: today }).allowed, true)
+  // The AIBot plan alone opens the app; the older text/analysis pair does not.
+  assert.equal(auth.planState({ username: 'a', subBotUntil: year }).allowed, true)
+  assert.equal(auth.planState({ username: 'a', subTextUntil: year, subAnalysisUntil: year }).allowed, false)
+  assert.equal(auth.planState({ username: 'a', subBotUntil: '' }).allowed, false)
+  // The plan reads as valid through its expiry day, the cloud's own comparison.
+  assert.equal(auth.planState({ username: 'a', subBotUntil: today }).allowed, true)
   const yesterday = auth.todayStamp(new Date(Date.now() - 86_400_000))
-  assert.equal(auth.planState({ username: 'a', subTextUntil: yesterday, subAnalysisUntil: year }).allowed, false)
+  assert.equal(auth.planState({ username: 'a', subBotUntil: yesterday }).allowed, false)
   // An administrator may use the app without a plan.
   assert.equal(auth.planState({ username: 'a', isAdmin: true }).allowed, true)
   assert.equal(auth.planState({ username: 'a', isAdmin: true }).admin, true)
   // The stamps come back for the paywall to name them.
-  const state = auth.planState({ username: 'a', subTextUntil: year, subAnalysisUntil: yesterday })
-  assert.equal(state.subTextUntil, year)
-  assert.equal(state.subAnalysisUntil, yesterday)
+  const state = auth.planState({ username: 'a', subBotUntil: year, subTextUntil: yesterday })
+  assert.equal(state.subBotUntil, year)
+  assert.equal(state.subTextUntil, yesterday)
 })
 
 after(() => {

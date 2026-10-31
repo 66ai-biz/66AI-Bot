@@ -1,12 +1,17 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
+import { mkdtemp, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { writeFileSync } from 'node:fs'
 import { install as installModels } from '../src/host/models.js'
 import { checkKey, install, keyRefFor } from '../src/host/providers.js'
 
 // A DSH with the official DeepSeek route, an account route, and the pi-ai adapter: its
 // directory offers catalog providers, and its settings take path writes the way DSH's
-// do, under a revision. Routes come and go with the pi-ai section.
-function dsh({ keys = {}, readOnly = [], user = {}, base = {}, catalog = { anthropic: ['claude-a', 'claude-b'], moonshotai: ['kimi-k3'] } } = {}) {
+// do, under a revision. Routes come and go with the pi-ai section. The built-in 66ai
+// preset runs only when `preset: true`, so the mechanics tests below keep their shapes.
+function dsh({ keys = {}, readOnly = [], user = {}, base = {}, catalog = { anthropic: ['claude-a', 'claude-b'], moonshotai: ['kimi-k3'] }, preset = false } = {}) {
   const store = { ...keys }
   const writes = []
   const listeners = new Map()
@@ -64,7 +69,7 @@ function dsh({ keys = {}, readOnly = [], user = {}, base = {}, catalog = { anthr
       discoverModels: async (ns, request) => { discovered.push([ns, request]); return [{ id: 'relay-1', name: 'Relay One', contextWindow: 128000, inputModalities: ['text'] }, { id: 'relay-2' }] },
     },
   }
-  const rt = { ctx, state: { bots: {} } }
+  const rt = { ctx, state: { bots: {} }, builtinProviders: preset === true }
   installModels(rt)
   install(rt)
   return { rt, store, writes, listeners, discovered }
@@ -221,4 +226,64 @@ test('an API key is what an HTTP header carries, without a NAME= or quotes', () 
 test('a route\'s key reference follows DSH\'s own Models page', () => {
   assert.equal(keyRefFor('moonshotai'), 'MOONSHOTAI_API_KEY')
   assert.equal(keyRefFor('my-gateway2'), 'MY_GATEWAY2_API_KEY')
+})
+
+test('the preset 66ai provider lands on a fresh setup, with the shipped key when one is there', async () => {
+  const home = await mkdtemp(join(tmpdir(), 'aibot-preset-'))
+  process.env.DSH_HOME = home
+  try {
+    writeFileSync(join(home, 'preset-key.local'), `${JSON.stringify({ key: 'sk-shipped' })}\n`)
+    const { rt, store } = dsh({ preset: true, keys: { DEEPSEEK_API_KEY: 'k' } })
+    const view = await rt.providersView()
+    const preset = row(view, 'ai66')
+    assert.equal(preset.name, '66ai')
+    assert.equal(preset.custom, true)
+    assert.equal(preset.removable, true)
+    assert.equal(preset.models.length, 6)
+    assert.equal(preset.models[0].ref, 'ai66/z-ai/glm-5.3-flash')
+    assert.deepEqual(preset.key, { configured: true, writable: true })
+    assert.equal(store.AI66_API_KEY, 'sk-shipped')
+    // Every preset model is usable without anyone typing a key.
+    assert.deepEqual(await needing(rt), [])
+    // A second view does not duplicate or rewire the preset.
+    const again = await rt.providersView()
+    assert.equal(row(again, 'ai66').models.length, 6)
+    assert.deepEqual(await needing(rt), [])
+  } finally {
+    delete process.env.DSH_HOME
+    await rm(home, { recursive: true, force: true })
+  }
+})
+
+test('the preset lands keyless when no key ships, and its models honestly ask for one', async () => {
+  const { rt, writes } = dsh({ preset: true })
+  const view = await rt.providersView()
+  const preset = row(view, 'ai66')
+  assert.equal(preset.models.length, 6)
+  assert.deepEqual(preset.key, { configured: false, writable: true })
+  // Six preset models all ask for the key together.
+  assert.deepEqual([...new Set(await needing(rt))], ['deepseek-official', 'ai66'])
+  // The preset write is the only one so far, and it names the key reference.
+  assert.equal(writes.length, 1)
+  assert.equal(writes[0][1][0].value.apiKeyEnv, 'AI66_API_KEY')
+})
+
+test('a preset provider added keyless earlier gets the shipped key wired in later', async () => {
+  const home = await mkdtemp(join(tmpdir(), 'aibot-preset-'))
+  const { rt, store } = dsh({ preset: true })
+  const view = await rt.providersView()
+  assert.deepEqual(row(view, 'ai66').key, { configured: false, writable: true })
+  // The app drops the shipped key into DSH_HOME after a login; the next view picks it up.
+  process.env.DSH_HOME = home
+  try {
+    writeFileSync(join(home, 'preset-key.local'), `${JSON.stringify({ key: 'sk-late' })}\n`)
+    const again = await rt.providersView()
+    assert.deepEqual(row(again, 'ai66').key, { configured: true, writable: true })
+    assert.equal(store.AI66_API_KEY, 'sk-late')
+    // The preset needs no key anymore; only DSH's own keyless route still does.
+    assert.deepEqual([...new Set(await needing(rt))], ['deepseek-official'])
+  } finally {
+    delete process.env.DSH_HOME
+    await rm(home, { recursive: true, force: true })
+  }
 })
