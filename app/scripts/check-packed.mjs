@@ -59,6 +59,7 @@ writeFileSync(join(work, 'home', 'account.json'), JSON.stringify({
   username: 'tester',
   points: { image: 0, video: 0, text: 100, analysis: 0, app: 0, universal: 0 },
   subTextUntil: '9999-12-31', subAnalysisUntil: '9999-12-31',
+  subBotUntil: '9999-12-31', agentSlots: 5,
 }))
 // CDP cannot answer the native first-close dialog. The notice has its own tests; this check
 // exercises hiding and reopening a window after the user has acknowledged it.
