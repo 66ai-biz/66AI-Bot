@@ -192,7 +192,7 @@ export function install(rt) {
     })
   }
 
-  async function buildBot(cleanName, { role = '', instructions = '', color, brief = '', createdBy, main = false, avatar, model, effort, workDir, copyOf, pickModel = false }) {
+  async function buildBot(cleanName, { role = '', instructions = '', color, brief = '', createdBy, main = false, avatar, model, effort, workDir, projectId, copyOf, pickModel = false }) {
     const cleanAvatarValue = cleanAvatar(avatar)
     // The model is fixed at creation, so a later change of the DSH default leaves it alone.
     const modelRef = model ? await rt.resolveModel(model) : pickModel ? undefined : await rt.defaultModel()
@@ -204,7 +204,13 @@ export function install(rt) {
     const effortId = modelRef === undefined ? undefined
       : effort === null || effort === '' ? undefined
       : (await rt.resolveEffort(modelRef, effort)) ?? await rt.defaultEffort(modelRef)
-    const dir = workDir === undefined || workDir === null ? undefined : await rt.cleanWorkDir(workDir)
+    // A Bot born into a project works in the project's folder, unless the creator named
+    // a folder of their own.
+    const project = projectId === undefined || projectId === null || projectId === '' ? undefined : rt.projectOf?.(projectId)
+    if (projectId !== undefined && projectId !== null && projectId !== '' && project === undefined) throw new Error('Unknown project')
+    const dir = workDir !== undefined && workDir !== null ? await rt.cleanWorkDir(workDir)
+      : project !== undefined ? await rt.cleanWorkDir(project.folder)
+      : undefined
     const clash = dir === undefined ? undefined : await rt.privateClash(dir)
     if (clash) throw new Error(`${dir} is in or around the folder of ${clash.name}, a private Bot, so ${cleanName} cannot work there`)
     const id = await createSession(cleanName, { dir })
@@ -219,6 +225,7 @@ export function install(rt) {
         ...(modelRef ? { model: modelRef } : {}),
         ...(effortId ? { effort: effortId } : {}),
         ...(dir ? { workDir: dir } : {}),
+        ...(project !== undefined ? { projectId: project.id } : {}),
         instructions: String(instructions).trim(),
         createdAt: Date.now(),
         createdBy: createdBy ?? null,
@@ -321,6 +328,13 @@ export function install(rt) {
     const browserGrants = patch.browserGrants === undefined ? undefined : cleanBrowserGrants(patch.browserGrants)
     // Checked first, so a folder, model or level that does not pass leaves the rest
     // unchanged too.
+    // A project named in the patch: the membership is a mark on the Bot, and a Bot with
+    // no folder of its own starts working in the project's folder through the usual
+    // folder change below, so its Sessions move the way any folder move moves them.
+    if (patch.projectId !== undefined && patch.projectId !== null && patch.projectId !== '') {
+      if (rt.projectOf?.(patch.projectId) === undefined) throw new Error('Unknown project')
+      if (patch.workDir === undefined && bot.workDir === undefined) patch = { ...patch, workDir: rt.projectOf(patch.projectId).folder }
+    }
     const moving = patch.workDir !== undefined
     const workDir = moving ? await rt.cleanWorkDir(patch.workDir ?? '') : undefined
     const flag = patch.private === undefined ? undefined : patch.private === true
@@ -386,6 +400,10 @@ export function install(rt) {
       modelChanged = true
     }
     if (patch.permission !== undefined) await rt.setPermission(bot, patch.permission)
+    if (patch.projectId !== undefined) {
+      if (patch.projectId === null || patch.projectId === '') delete bot.projectId
+      else bot.projectId = patch.projectId
+    }
     if (browserGrants !== undefined) {
       if (browserGrants === null) delete bot.browserGrants
       else bot.browserGrants = browserGrants

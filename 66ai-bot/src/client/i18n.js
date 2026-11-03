@@ -1069,6 +1069,29 @@ const ZH = {
   'Up one level': '上一级',
   'No folders inside.': '里面没有文件夹。',
   'Some folders are not shown.': '还有一些文件夹没有显示。',
+
+  // Projects and assets
+  Projects: '项目',
+  Assets: '资产',
+  'Projects · {count}': '项目 · {count}',
+  'Project name': '项目名称',
+  'Create project': '创建项目',
+  'Rename project': '重命名项目',
+  'Delete project': '删除项目',
+  'Open folder': '打开文件夹',
+  'Copy path': '复制路径',
+  'Add a Bot to this project': '把 Bot 加入项目',
+  'Add a Bot': '添加 Bot',
+  'Remove from project': '移出项目',
+  All: '全部',
+  Images: '图片',
+  Videos: '视频',
+  Audio: '音频',
+  Documents: '文档',
+  'All projects': '全部项目',
+  'No projects yet. A project is a folder under the team workspace; the Bots in it work there, and their files land in it.': '还没有项目。项目是团队工作区里的一个文件夹：项目里的 Bot 在这里工作，产出的文件也落在这里。',
+  'No assets yet. Files the Bots make in the team workspace and project folders show up here.': '还没有资产。Bot 在团队工作区和项目文件夹里产出的文件会显示在这里。',
+  '{shown} of {total}': '{shown}/{total}',
 }
 
 // Host errors stay English, since Bots read them too; they are translated where the

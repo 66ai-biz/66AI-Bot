@@ -67,6 +67,9 @@
     },
     "usage-page.js": {
       "#fff": 2
+    },
+    "assets-page.js": {
+      "#fff": 2
     }
   },
   "radii": {

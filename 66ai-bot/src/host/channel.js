@@ -99,7 +99,7 @@ export function install(rt) {
   })
   // What a host that only reads the team may still answer.
   // Updates change the dsh profile, not the team, so a reading host may run them too.
-  const READS = new Set(['state', 'models', 'efforts', 'providers', 'provider-models', 'earlier', 'chat', 'run-stats', 'room-progress', 'exchange', 'exchange-text', 'file-text', 'usage', 'schedules', 'memory-view', 'browser-wait', 'browser-result', 'diagnostics', 'diagnostics-log', 'diagnostics-clear', 'update-check', 'update-install', 'dsh-update-install', 'repo-stars', 'approval-answer', 'thinking', 'avatar-library'])
+  const READS = new Set(['state', 'models', 'efforts', 'providers', 'provider-models', 'earlier', 'chat', 'run-stats', 'room-progress', 'exchange', 'exchange-text', 'file-text', 'usage', 'schedules', 'memory-view', 'browser-wait', 'browser-result', 'diagnostics', 'diagnostics-log', 'diagnostics-clear', 'update-check', 'update-install', 'dsh-update-install', 'repo-stars', 'approval-answer', 'thinking', 'avatar-library', 'projects', 'assets', 'asset-read'])
 
   function setPrefs(body) {
     if (body.theme !== undefined) {
@@ -230,7 +230,7 @@ export function install(rt) {
           return ok([...rt.roomProgress.entries()].filter(([, entry]) => entry.roomId === body.roomId).map(([callId, entry]) => ({ callId, replies: entry.replies, speaking: entry.speaking ?? null })))
         case 'create-bot': {
           await rt.bootstrap()
-          const bot = await rt.createBot({ name: body.name, role: body.role, color: body.color, instructions: body.instructions, brief: body.brief, avatar: body.avatar, model: body.model, effort: body.effort, workDir: body.workDir })
+          const bot = await rt.createBot({ name: body.name, role: body.role, color: body.color, instructions: body.instructions, brief: body.brief, avatar: body.avatar, model: body.model, effort: body.effort, workDir: body.workDir, projectId: body.projectId })
           return ok(bot)
         }
         case 'update-bot':
@@ -296,6 +296,35 @@ export function install(rt) {
         case 'team-workspace':
           await rt.load()
           return ok({ team: await rt.setTeamWorkspace(String(body.path ?? '')) })
+        // Projects: a named folder under the team workspace that groups Bots and files.
+        case 'projects':
+          await rt.load()
+          return ok(await rt.projectsView(body))
+        case 'project-create':
+          await rt.load()
+          return ok(await rt.projectCreate(body))
+        case 'project-rename':
+          await rt.load()
+          return ok(await rt.projectRename(body))
+        case 'project-delete':
+          await rt.load()
+          return ok(await rt.projectDelete(body))
+        case 'project-set-bot':
+          await rt.load()
+          return ok(await rt.projectSetBot(body))
+        case 'project-open':
+          await rt.load()
+          return ok(await rt.projectOpen(body))
+        // Assets: the gallery of files the team keeps in its folders.
+        case 'assets':
+          await rt.load()
+          return ok(await rt.assetsView(body))
+        case 'asset-read':
+          await rt.load()
+          return ok(await rt.assetRead(body))
+        case 'asset-reveal':
+          await rt.load()
+          return ok(await rt.assetReveal(body))
         case 'add-agent':
           await rt.load()
           return ok(await rt.addAgent())
