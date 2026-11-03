@@ -51,6 +51,7 @@ const Row = ({ channel, platformName, onToggle, onOpen }) => {
       h('span', { className: 'bt-ch-name' }, channel.name),
       h('span', { className: 'bt-tag' }, platformName),
       channel.botName ? h('span', { className: 'bt-tag' }, channel.botName) : null,
+      channel.relay ? h('span', { className: 'bt-tag' }, t('Work mode')) : null,
       failing ? h('span', { className: 'bt-ch-err' }, channel.stats.error) : null,
       channel.stats?.received || channel.stats?.sent
         ? h('span', { className: 'bt-ch-stats' }, t('{received} in · {sent} out', { received: channel.stats.received ?? 0, sent: channel.stats.sent ?? 0 }))
@@ -68,6 +69,7 @@ function ChannelForm({ platform, platformName, channel, fields, hint, roster, on
   const [config, setConfig] = useState(() => Object.fromEntries((channel?.config ? Object.entries(channel.config) : []).map(([key, value]) => [key, typeof value === 'string' ? value : ''])))
   const [trigger, setTrigger] = useState(channel?.trigger ?? 'mention')
   const [allowFrom, setAllowFrom] = useState((channel?.allowFrom ?? []).join(', '))
+  const [relay, setRelay] = useState(channel?.relay === true)
   const [testing, setTesting] = useState(false)
   const [testResult, setTestResult] = useState(null)
   const [busy, setBusy] = useState(false)
@@ -80,6 +82,7 @@ function ChannelForm({ platform, platformName, channel, fields, hint, roster, on
         platform, name, botId, config,
         trigger,
         allowFrom: allowFrom.split(',').map(item => item.trim()).filter(Boolean),
+        relay,
       })
       onDone()
     } finally { setBusy(false) }
@@ -119,6 +122,8 @@ function ChannelForm({ platform, platformName, channel, fields, hint, roster, on
         h('option', { value: 'all' }, t('Every message')))),
     h('label', null, t('Allow list (chat or user IDs, comma separated)'),
       h('input', { className: 'bt-ch-input', value: allowFrom, placeholder: t('Empty means everyone'), onChange: event => setAllowFrom(event.target.value) })),
+    h(Switch, { label: t('Work mode (Superagent)'), on: relay, onChange: setRelay }),
+    relay ? h('span', { className: 'bt-ch-note' }, t('Work mode hands this chat to the Superagent as work tickets instead of chatting back. Configure the senders who may originate work in the Superagent panel; replies arrive from there.')) : null,
     h('div', { className: 'bt-ch-actions' },
       h('button', { type: 'button', className: 'bt-soft bt-soft-sm', disabled: testing, onClick: test }, t('Test connection')),
       testResult !== null ? h('span', { className: 'bt-ch-test', 'data-ok': String(testResult.ok === true) },

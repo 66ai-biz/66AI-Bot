@@ -4,6 +4,10 @@ All notable changes to 66AI Bot are listed here. The format follows [Keep a Chan
 
 ## [Unreleased]
 
+### Added
+
+- IM channels get a work mode: a channel switched to it hands its inbound messages to the Superagent over a file bridge (`<data dir>/im-bridge`) instead of chatting back, the Superagent's new IM bridge Source turns them into work tickets under its own Policy (allowed senders, admission), and its replies are pumped back out through the channel's own adapter — each reply sent exactly once, a stopped or missing destination holding the queue or dropping the line. Configure who may originate work in the Superagent panel's Eval settings; the app-refreshed vendored Superagent rides at 0.1.2 with this Source built in.
+
 ## [0.2.14] - 2026-11-03
 
 ### Added

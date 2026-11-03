@@ -1153,6 +1153,9 @@ var ZH = {
   "Every message": "所有消息都回复",
   "Allow list (chat or user IDs, comma separated)": "白名单（聊天或用户 ID，逗号分隔）",
   "Empty means everyone": "留空表示不限制",
+  "Work mode (Superagent)": "工单模式（Superagent）",
+  "Work mode": "工单",
+  "Work mode hands this chat to the Superagent as work tickets instead of chatting back. Configure the senders who may originate work in the Superagent panel; replies arrive from there.": "工单模式把这个对话交给 Superagent 接工单，不再普通聊天回复。可在 Superagent 面板配置允许发起工作的发送者；回复从那里送回。",
   "Test connection": "测试连接",
   "Connected as {name}": "已连接：{name}",
   Failed: "失败",
@@ -17115,6 +17118,7 @@ var Row3 = ({ channel, platformName, onToggle, onOpen }) => {
       (0, import_react46.createElement)("span", { className: "bt-ch-name" }, channel.name),
       (0, import_react46.createElement)("span", { className: "bt-tag" }, platformName),
       channel.botName ? (0, import_react46.createElement)("span", { className: "bt-tag" }, channel.botName) : null,
+      channel.relay ? (0, import_react46.createElement)("span", { className: "bt-tag" }, t("Work mode")) : null,
       failing ? (0, import_react46.createElement)("span", { className: "bt-ch-err" }, channel.stats.error) : null,
       channel.stats?.received || channel.stats?.sent ? (0, import_react46.createElement)("span", { className: "bt-ch-stats" }, t("{received} in · {sent} out", { received: channel.stats.received ?? 0, sent: channel.stats.sent ?? 0 })) : null,
       (0, import_react46.createElement)("span", { className: "bt-chevron" }, (0, import_react46.createElement)(ChevronRightIcon))
@@ -17129,6 +17133,7 @@ function ChannelForm({ platform, platformName, channel, fields, hint, roster, on
   const [config, setConfig] = (0, import_react46.useState)(() => Object.fromEntries((channel?.config ? Object.entries(channel.config) : []).map(([key, value]) => [key, typeof value === "string" ? value : ""])));
   const [trigger, setTrigger] = (0, import_react46.useState)(channel?.trigger ?? "mention");
   const [allowFrom, setAllowFrom] = (0, import_react46.useState)((channel?.allowFrom ?? []).join(", "));
+  const [relay, setRelay] = (0, import_react46.useState)(channel?.relay === true);
   const [testing, setTesting] = (0, import_react46.useState)(false);
   const [testResult, setTestResult] = (0, import_react46.useState)(null);
   const [busy, setBusy] = (0, import_react46.useState)(false);
@@ -17143,7 +17148,8 @@ function ChannelForm({ platform, platformName, channel, fields, hint, roster, on
         botId,
         config,
         trigger,
-        allowFrom: allowFrom.split(",").map((item) => item.trim()).filter(Boolean)
+        allowFrom: allowFrom.split(",").map((item) => item.trim()).filter(Boolean),
+        relay
       });
       onDone();
     } finally {
@@ -17226,6 +17232,8 @@ function ChannelForm({ platform, platformName, channel, fields, hint, roster, on
       t("Allow list (chat or user IDs, comma separated)"),
       (0, import_react46.createElement)("input", { className: "bt-ch-input", value: allowFrom, placeholder: t("Empty means everyone"), onChange: (event) => setAllowFrom(event.target.value) })
     ),
+    (0, import_react46.createElement)(Switch, { label: t("Work mode (Superagent)"), on: relay, onChange: setRelay }),
+    relay ? (0, import_react46.createElement)("span", { className: "bt-ch-note" }, t("Work mode hands this chat to the Superagent as work tickets instead of chatting back. Configure the senders who may originate work in the Superagent panel; replies arrive from there.")) : null,
     (0, import_react46.createElement)(
       "div",
       { className: "bt-ch-actions" },

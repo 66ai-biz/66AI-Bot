@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { appendFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
@@ -53,7 +53,7 @@ function start() {
     route = options
     return register(options)
   }
-  const rt = createRuntime(ctx, { home, github: false, diagnosticsFile: false })
+  const rt = createRuntime(ctx, { home, github: false, diagnosticsFile: false, imBridgeDir: join(home, 'im-bridge') })
   // A mock platform adapter: no network, records starts and sends.
   const adapter = {
     platform: 'telegram',
@@ -227,4 +227,63 @@ test('over HTTP the channel saves, and a masked token sent back keeps the stored
   const tested = await call('im-channel-test', { platform: 'telegram', config: { token: 'x' } })
   assert.equal(tested.value.ok, true)
   assert.equal(tested.value.name, '@mockbot')
+})
+
+// Work mode: the message goes over the file bridge to the dsh-superagent IM
+// Source instead of a chat turn; its replies come back through the outbox pump.
+test('work mode relays the message to the bridge inbox instead of chatting', async (t) => {
+  const { rt, prompts, stop } = start()
+  t.after(stop)
+  await rt.load()
+  const view = await rt.imEndpoint('im-channel-save', {
+    platform: 'telegram', name: 'work', botId: 'chief', enabled: true, relay: true,
+    config: { token: '123456:tok', proxy: '' },
+  })
+  assert.equal(view.channels[0].relay, true, 'the view carries the mode')
+  const state = rt.state.imChannels[view.channels[0].id]
+  await new Promise(resolve => setImmediate(resolve))
+  await rt.imInbound(state, { chatId: '200', chatType: 'group', userId: 'u9', userName: 'Ben', text: '修一下下载站', mentioned: true })
+  assert.equal(prompts.length, 0, 'work mode does not chat')
+  const relayed = JSON.parse(readFileSync(join(rt.imBridgeDir(), 'inbox.jsonl'), 'utf8').trim())
+  assert.equal(relayed.platform, 'telegram')
+  assert.equal(relayed.chatId, '200')
+  assert.equal(relayed.userId, 'u9')
+  assert.equal(relayed.mentioned, true)
+  assert.equal(typeof relayed.id, 'string')
+  assert.equal(state.stats.relayed, 1)
+})
+
+test('the outbox pump sends each superagent reply once through the adapter', async (t) => {
+  const { rt, adapter, stop } = start()
+  t.after(stop)
+  await rt.load()
+  const view = await rt.imEndpoint('im-channel-save', {
+    platform: 'telegram', name: 'work', botId: 'chief', enabled: true, relay: true,
+    config: { token: '123456:tok', proxy: '' },
+  })
+  const channelId = view.channels[0].id
+  await new Promise(resolve => setImmediate(resolve))
+  mkdirSync(rt.imBridgeDir(), { recursive: true })
+  const outbox = join(rt.imBridgeDir(), 'outbox.jsonl')
+  writeFileSync(outbox, `${JSON.stringify({ id: 'r1', platform: 'telegram', chatId: '200', text: '工单 #1 已完成' })}\nnot json\n\n${JSON.stringify({ id: 'r2', platform: 'telegram', chatId: '200', text: '第二条' })}\n`)
+  await rt.imOutboxTick()
+  assert.deepEqual(adapter.sent.map(item => item.text), ['工单 #1 已完成', '第二条'], 'the reply lines go out in order, junk skipped')
+  assert.ok(rt.state.imOutbox.sent.includes('r1') && rt.state.imOutbox.sent.includes('r2'))
+  assert.equal(rt.state.imOutbox.cursor, readFileSync(outbox).length, 'the cursor sits at the end of the file')
+  // A restart replays the file from zero; the sent ids dedupe it.
+  rt.state.imOutbox.cursor = 0
+  await rt.imOutboxTick()
+  assert.equal(adapter.sent.length, 2, 'nothing is sent twice')
+  assert.equal(rt.state.imOutbox.cursor, readFileSync(outbox).length)
+  // A reply for a platform with no channel drops; a stopped destination holds the rest.
+  appendFileSync(outbox, `${JSON.stringify({ id: 'r3', platform: 'discord', chatId: 'x', text: '没人' })}\n${JSON.stringify({ id: 'r4', platform: 'telegram', chatId: '200', text: '排队' })}\n`)
+  await rt.imEndpoint('im-channel-toggle', { id: channelId, enabled: false })
+  await rt.imOutboxTick()
+  assert.ok(rt.state.imOutbox.sent.includes('r3'), 'a platform with no channel drops the reply')
+  assert.ok(!rt.state.imOutbox.sent.includes('r4'), 'a stopped destination holds the line back')
+  await rt.imEndpoint('im-channel-toggle', { id: channelId, enabled: true })
+  await new Promise(resolve => setImmediate(resolve))
+  await rt.imOutboxTick()
+  assert.ok(rt.state.imOutbox.sent.includes('r4'), 'the held line goes out once the channel is back')
+  assert.equal(adapter.sent.length, 3, 'three telegram sends in total; the discord line went nowhere')
 })

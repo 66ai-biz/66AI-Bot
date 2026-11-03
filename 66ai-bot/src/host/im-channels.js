@@ -3,11 +3,19 @@
 // message is delivered to the channel's Bot like a user message that names its
 // origin; the turn's texts are sent back to the chat that asked. MuseBot's
 // multi-platform reach on this App's own runtime, with the settings in the App.
+// A channel in work mode (relay) does not chat: its messages go over the file
+// bridge at <DSH_HOME>/im-bridge to the dsh-superagent IM Source, whose replies
+// this module pumps back out through the same adapters.
 import { randomUUID } from 'node:crypto'
+import { appendFileSync, mkdirSync, readdirSync, readFileSync, renameSync, statSync, unlinkSync } from 'node:fs'
+import { dirname, join } from 'node:path'
 import { textOf } from './text.js'
 
 const MAX_TITLE = 60
 const REPLY_TIMEOUT_MS = 10 * 60_000
+const BRIDGE_ROTATE_BYTES = 10 * 1024 * 1024
+const BRIDGE_ROTATE_KEEP = 2
+const OUTBOX_SENT_KEEP = 2000
 const PLATFORMS = {
   telegram: { name: 'Telegram', fields: ['token', 'proxy'], hint: 'Bot token from @BotFather' },
   discord: { name: 'Discord', fields: ['token', 'proxy'], hint: 'Bot token from the developer portal' },
@@ -23,6 +31,7 @@ const mask = secret => typeof secret === 'string' && secret.length > 8 ? `••
 export function install(rt) {
   const { ctx, state } = rt
   state.imChannels ??= {}
+  state.imOutbox ??= { cursor: 0, sent: [] }
 
   // channelId -> { stop(signal) }; started only while the channel is enabled.
   const running = new Map()
@@ -36,6 +45,38 @@ export function install(rt) {
     const bot = botOfChannel(channel)
     if (bot === undefined) throw invalid('The channel\'s Bot is gone')
     return rt.chatOf(bot.id)
+  }
+
+  // The file bridge the dsh-superagent IM Source reads and writes.
+  const bridgeDir = () => rt.config.imBridgeDir ?? join(rt.dshHome, 'im-bridge')
+
+  // Rotate a bridge file once it grows past the cap, keeping a few generations.
+  const rotateIfBig = (file, stem) => {
+    try {
+      if (statSync(file).size < BRIDGE_ROTATE_BYTES) return
+      renameSync(file, `${file}.${new Date().toISOString().replace(/[:.]/g, '-')}`)
+      const rotated = readdirSync(dirname(file)).filter(name => name.startsWith(`${stem}.jsonl.`)).sort()
+      for (const name of rotated.slice(0, Math.max(0, rotated.length - BRIDGE_ROTATE_KEEP))) {
+        unlinkSync(join(dirname(file), name))
+      }
+    } catch { /* a missing file has nothing to rotate */ }
+  }
+
+  // Work mode: hand the message to the Superagent over the bridge inbox. Stable
+  // random ids make the Source's cursor and duplicate handling safe; the reader
+  // treats a shrunken file (this rotation) as a restart from zero.
+  const relayInbound = (channel, message) => {
+    const dir = bridgeDir()
+    mkdirSync(dir, { recursive: true })
+    const inbox = join(dir, 'inbox.jsonl')
+    rotateIfBig(inbox, 'inbox')
+    const line = JSON.stringify({
+      id: randomUUID(), platform: channel.platform, chatId: String(message.chatId), chatType: message.chatType,
+      userId: String(message.userId), userName: message.userName ?? '', text: message.text,
+      mentioned: message.mentioned === true, at: new Date().toISOString(),
+    })
+    appendFileSync(inbox, `${line}\n`, 'utf8')
+    channel.stats.relayed = (channel.stats.relayed ?? 0) + 1
   }
 
   // The turn's reply for one inbound message. Bots answer one channel question at
@@ -81,6 +122,12 @@ export function install(rt) {
     const allow = channel.allowFrom ?? []
     if (allow.length > 0 && !allow.includes(message.chatId) && !allow.includes(message.userId)) return
     if (message.chatType === 'group' && channel.trigger === 'mention' && message.mentioned !== true) return
+    if (channel.relay === true) {
+      // Work mode: the Superagent owns this conversation; no chat turn.
+      try { relayInbound(channel, message); stats.error = null } catch (error) { stats.error = String(error).slice(0, 300) }
+      void rt.save().catch(() => {})
+      return
+    }
     const bot = botOfChannel(channel)
     if (bot === undefined) return
     const sessionId = rt.chatOf(bot.id)
@@ -134,6 +181,75 @@ export function install(rt) {
     waiting.set(toId, [...(waiting.get(toId) ?? []), ...list])
   }
 
+  // The outbox pump: the Superagent's IM Source queues reply lines
+  // `{ id, platform, chatId, text }` and this sends each exactly once through the
+  // channel's adapter. The cursor advances only past delivered or permanently
+  // undeliverable lines; a failing or stopped destination holds the rest back.
+  // Sent ids stay in the state file, so a restart never sends a line twice.
+  let pumping = false
+  const outboxTick = async () => {
+    if (pumping) return
+    pumping = true
+    try {
+      const mark = state.imOutbox ??= { cursor: 0, sent: [] }
+      let bytes
+      try { bytes = readFileSync(join(bridgeDir(), 'outbox.jsonl')) } catch { return }
+      if (bytes.length < mark.cursor) mark.cursor = 0
+      const chunk = bytes.subarray(mark.cursor).toString('utf8')
+      const cut = chunk.lastIndexOf('\n')
+      if (cut === -1) return
+      const complete = chunk.slice(0, cut + 1)
+      const end = mark.cursor + Buffer.byteLength(complete, 'utf8')
+      let stop = null
+      let offset = mark.cursor
+      let changed = false
+      for (const line of complete.split('\n')) {
+        const at = offset
+        offset += Buffer.byteLength(`${line}\n`, 'utf8')
+        if (line.trim() === '') continue
+        let reply
+        try { reply = JSON.parse(line) } catch { changed = true; continue }
+        if (mark.sent.includes(reply.id)) continue
+        const channel = Object.values(state.imChannels).find(item => item.platform === reply.platform)
+        if (channel === undefined) {
+          // No destination on this platform at all: drop the reply, like the
+          // Superagent's own `gone`, and keep the pump moving.
+          mark.sent.push(reply.id)
+          changed = true
+          continue
+        }
+        if (channel.enabled !== true || !running.has(channel.id) || stop !== null) { stop ??= at; break }
+        try {
+          await adapters()[channel.platform]?.send(channel, String(reply.chatId), String(reply.text ?? ''))
+          mark.sent.push(reply.id)
+          changed = true
+          channel.stats.sent = (channel.stats.sent ?? 0) + 1
+        } catch (error) {
+          channel.stats ??= {}
+          channel.stats.error = String(error).slice(0, 300)
+          stop ??= at
+          break
+        }
+      }
+      if (stop !== null) mark.cursor = stop
+      else {
+        mark.cursor = end
+        if (changed && mark.sent.length > OUTBOX_SENT_KEEP) mark.sent = mark.sent.slice(-OUTBOX_SENT_KEEP)
+      }
+      if (changed) void rt.save().catch(() => {})
+    } finally { pumping = false }
+  }
+  let pumpTimer = null
+  const startPump = () => {
+    if (pumpTimer !== null) return
+    pumpTimer = setInterval(() => { void outboxTick().catch(error => rt.warn('66ai-bot: IM outbox pump failed: %s', error)) }, 2_000)
+    pumpTimer.unref?.()
+  }
+  const stopPump = () => {
+    if (pumpTimer !== null) clearInterval(pumpTimer)
+    pumpTimer = null
+  }
+
   function channelView(channel) {
     const config = {}
     const fields = PLATFORMS[channel.platform]?.fields ?? []
@@ -151,6 +267,7 @@ export function install(rt) {
       running: running.has(channel.id),
       trigger: channel.trigger ?? 'mention',
       allowFrom: channel.allowFrom ?? [],
+      relay: channel.relay === true,
       config,
       stats: { ...channel.stats ?? {}, running: running.has(channel.id) },
       fields,
@@ -178,7 +295,7 @@ export function install(rt) {
     }
     const trigger = body.trigger === 'all' ? 'all' : 'mention'
     const allowFrom = [...new Set((Array.isArray(body.allowFrom) ? body.allowFrom : []).map(String).map(id => id.trim()).filter(Boolean))]
-    return { platform, name, botId: bot.id, config, trigger, allowFrom }
+    return { platform, name, botId: bot.id, config, trigger, allowFrom, relay: body.relay === true }
   }
 
   async function restart(channel) {
@@ -198,6 +315,7 @@ export function install(rt) {
   }
 
   const stopAll = () => {
+    stopPump()
     for (const [id, stop] of running) {
       try { stop(new AbortController().signal) } catch (error) { rt.warn('66ai-bot: channel %s not stopped: %s', id, error) }
     }
@@ -211,6 +329,7 @@ export function install(rt) {
     if (startedOnce) return
     startedOnce = true
     await rt.load()
+    startPump()
     for (const channel of Object.values(state.imChannels)) {
       if (channel.enabled === true) void restart(channel).catch(error => rt.warn('66ai-bot: channel %s not restarted: %s', channel.name, error))
     }
@@ -224,7 +343,7 @@ export function install(rt) {
       if (typeof body.id === 'string' && state.imChannels[body.id] !== undefined) {
         channel = state.imChannels[body.id]
         const next = validate({ ...body, platform: channel.platform }, channel.config)
-        Object.assign(channel, { name: next.name, botId: next.botId, config: next.config, trigger: next.trigger, allowFrom: next.allowFrom })
+        Object.assign(channel, { name: next.name, botId: next.botId, config: next.config, trigger: next.trigger, allowFrom: next.allowFrom, relay: next.relay })
         if (typeof body.enabled === 'boolean') channel.enabled = body.enabled
       } else {
         channel = { id: randomUUID(), enabled: body.enabled === true, stats: { received: 0, sent: 0, lastAt: 0, error: null }, ...validate(body) }
@@ -272,6 +391,8 @@ export function install(rt) {
   Object.assign(rt, {
     imChannelsView: channelsView,
     imInbound: onInbound,
+    imOutboxTick: outboxTick,
+    imBridgeDir: bridgeDir,
     imAdaptersSetter: set => { rt.imAdapters = { ...rt.imAdapters, ...set } },
     imRestart: restart,
     imStopAll: stopAll,
