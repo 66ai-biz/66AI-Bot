@@ -7,8 +7,8 @@ fs.writeFileSync('index.html', h);
 console.log('links replaced:', n);
 
 const html = fs.readFileSync('index.html', 'utf8');
-const DL_PROXY = 'https://gh-proxy.com/https://github.com/66ai-biz/66AI-Bot/releases/download/v0.2.10/66ai-bot-0.2.10-win-x64.exe';
-const DL_RAW = 'https://github.com/66ai-biz/66AI-Bot/releases/download/v0.2.10/66ai-bot-0.2.10-win-x64.exe';
+const DL_PROXY = 'https://gh-proxy.com/https://github.com/66ai-biz/66AI-Bot/releases/download/v0.2.12/66ai-bot-0.2.12-win-x64.exe';
+const DL_RAW = 'https://github.com/66ai-biz/66AI-Bot/releases/download/v0.2.12/66ai-bot-0.2.12-win-x64.exe';
 
 const w = `// 66AI Bot homepage + download worker - generated
 const HTML = ${JSON.stringify(html)};
