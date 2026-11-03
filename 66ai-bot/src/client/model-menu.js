@@ -302,6 +302,10 @@ export function DeepSeekSignIn({ useUi, actions }) {
 }
 
 function SignInHost({ entry, actions }) {
+  // A non-function component here is a host/plugin contract mismatch; rendering it
+  // would crash the whole overlay slot with React #130 (element type is an object),
+  // which takes the settings dialog down with it. Skip quietly instead.
+  if (typeof entry.component !== 'function') return null
   const [ops] = useState(() => entry.inject?.() ?? {})
   const close = () => actions.closeSignIn()
   const useHook = source => selector => useSyncExternalStore(source.subscribe, () => selector(source.getSnapshot()))
