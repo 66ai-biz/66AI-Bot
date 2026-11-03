@@ -4,6 +4,8 @@ All notable changes to 66AI Bot are listed here. The format follows [Keep a Chan
 
 ## [Unreleased]
 
+## [0.2.14] - 2026-11-03
+
 ### Added
 
 - The app mounts the vendored dsh-superagent bundle (DeepSeek Harness's proactive work-item agent, MIT) as the profile's fourth bundle: it watches a GitHub repository, turns allowed requests into work tickets, runs each in its own worker session under the `dsh-superagent-worker` preset and reports back, with a management panel in the DSH client sidebar (its API serves under `/orchestrator/api/`). Its state lives in `<data dir>/superagent`. Until you configure the GitHub Source it waits for setup and costs nothing.
