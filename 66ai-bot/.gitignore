@@ -1,0 +1,5 @@
+# The SSR repro's input bundle: generated from src/client by esbuild, not source.
+# Regenerate before running test/ssr-repro.cjs:
+#   npx esbuild src/client/index.js --bundle --format=cjs --outfile=test/settings-bundle.cjs \
+#     --external:react --external:react-dom --loader:.css=empty
+test/settings-bundle.cjs
