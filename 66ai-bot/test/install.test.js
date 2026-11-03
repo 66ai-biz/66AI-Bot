@@ -40,6 +40,7 @@ test('apply registers listeners, tools, and effects in a fixed order', (t) => {
     'on credentials/reference-updated',
     'on settings/document-updated',
     'on session/event',
+    'on session/event',
     'on tools/execute',
     'effect 66ai-bot: agent tool restrict retry',
     'on agent/created',
@@ -120,6 +121,7 @@ test('apply registers listeners, tools, and effects in a fixed order', (t) => {
     'effect 66ai-bot: api route',
     'route POST /api/bot',
     'effect 66ai-bot: load state',
+    'effect 66ai-bot: IM channels',
   ])
 })
 

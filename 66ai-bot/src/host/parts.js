@@ -768,6 +768,7 @@ export function install(rt) {
           // An interrupted switch may not have finished moving the tasks over; stop
           // the earlier part only after they sit on the part that replaced it.
           await rt.moveSchedules?.(sessionId, currentOf(owner))
+          rt.imWaitersMove?.(sessionId, currentOf(owner))
           await ctx.workspaceRegistry.archiveSession(sessionId, { stopActivity: true })
             .catch(error => rt.warn('66ai-bot: earlier part %s not archived: %s', sessionId, error))
         } else {
@@ -856,6 +857,7 @@ export function install(rt) {
     }
     if (job.moved) {
       rt.renewMemory(agent.id)
+      rt.imWaitersMove?.(agent.id, currentOf(job))
       try {
         await rt.moveSchedules(agent.id, currentOf(job))
       } catch (error) {

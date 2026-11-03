@@ -22,6 +22,7 @@ import { ProvidersPage } from './providers-page.js'
 import { FolderMenu } from './folder-menu.js'
 import { ProjectsPage, PROJECTS_CSS } from './projects-page.js'
 import { AssetsPage, ASSETS_CSS, GalleryIcon } from './assets-page.js'
+import { ChannelsPage, CHANNELS_CSS, ChannelIcon } from './channels-page.js'
 import { t } from './i18n.js'
 
 const capitalize = word => word[0].toUpperCase() + word.slice(1)
@@ -29,8 +30,8 @@ const capitalize = word => word[0].toUpperCase() + word.slice(1)
 // Settings dialog: a 198px page list beside the page. Bots and group chats each list
 // their members, and one opens on its own settings form. Usage widens the dialog.
 // Models is there only in a window without DSH's own settings, which carry the providers.
-const SETTINGS_PAGES = [['general', 'General'], ['models', 'Models'], ['bots', 'Bots'], ['groups', 'Group chats'], ['projects', 'Projects'], ['assets', 'Assets'], ['connectors', 'Connectors'], ['capabilities', 'Capabilities'], ['browser', 'Browser'], ['schedules', 'Scheduled tasks'], ['usage', 'Usage'], ['secrets', 'Secrets'], ['feedback', 'Feedback'], ['about', 'About 66AI Bot']]
-const PAGE_ICONS = { ...SETTINGS_ICONS, models: SlidersIcon, connectors: ConnectorIcon, capabilities: PlugIcon, browser: ConnectorIcon, schedules: ClockIcon, projects: FolderIcon, assets: GalleryIcon, secrets: KeyIcon, feedback: FeedbackIcon, about: InfoIcon }
+const SETTINGS_PAGES = [['general', 'General'], ['models', 'Models'], ['bots', 'Bots'], ['groups', 'Group chats'], ['projects', 'Projects'], ['assets', 'Assets'], ['channels', 'Channels'], ['connectors', 'Connectors'], ['capabilities', 'Capabilities'], ['browser', 'Browser'], ['schedules', 'Scheduled tasks'], ['usage', 'Usage'], ['secrets', 'Secrets'], ['feedback', 'Feedback'], ['about', 'About 66AI Bot']]
+const PAGE_ICONS = { ...SETTINGS_ICONS, models: SlidersIcon, connectors: ConnectorIcon, capabilities: PlugIcon, browser: ConnectorIcon, schedules: ClockIcon, projects: FolderIcon, assets: GalleryIcon, channels: ChannelIcon, secrets: KeyIcon, feedback: FeedbackIcon, about: InfoIcon }
 
 function SetSection({ title, className = '', children }) {
   return h('section', { className: `bt-set-section ${className}`.trim() }, h('h3', null, title), h('div', { className: 'bt-set-card' }, children))
@@ -283,6 +284,7 @@ export function SettingsDialog({ page, id, roster, actions, useUpdate, leaving =
           shown === 'bots' && !bot ? h(BotsPage, { roster, actions, run }) : null,
           shown === 'projects' ? h(ProjectsPage, { roster, actions, run, Section: SetSection }) : null,
           shown === 'assets' ? h(AssetsPage, { roster, actions, run, Section: SetSection }) : null,
+          shown === 'channels' ? h(ChannelsPage, { roster, actions, run, Section: SetSection }) : null,
           room ? h('div', { className: 'bt-settings-form' }, h(GroupSettingsForm, { key: room.id, room, roster, actions, run })) : null,
           shown === 'groups' && !room ? h(GroupsPage, { roster, actions, run }) : null,
           shown === 'connectors' ? h(ConnectorsPage, { roster, actions }) : null,

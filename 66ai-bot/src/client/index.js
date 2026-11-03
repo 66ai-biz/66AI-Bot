@@ -35,6 +35,7 @@ import { FOLDER_CSS } from './folder-menu.js'
 import { USAGE_CSS } from './usage-page.js'
 import { PROJECTS_CSS } from './projects-page.js'
 import { ASSETS_CSS } from './assets-page.js'
+import { CHANNELS_CSS } from './channels-page.js'
 import { SCHEDULE_CSS } from './schedules.js'
 import { STORAGE, migrateStorage } from './storage.js'
 import { noteLeft, setUnread, sharedMap, toggleReaction } from './shared-map.js'
@@ -862,7 +863,7 @@ export function apply(ctx) {
     () => installCompiledStyles(LEARNING_CSS, 'learning'),
     () => installCompiledStyles(MODEL_CSS + FOLDER_CSS + BOT_SETTINGS_CSS + GROUP_SETTINGS_CSS + AVATAR_LIBRARY_CSS, 'models'),
     () => installCompiledStyles(USAGE_CSS, 'usage'),
-    () => installCompiledStyles(PROJECTS_CSS + ASSETS_CSS, 'projects-assets'),
+    () => installCompiledStyles(PROJECTS_CSS + ASSETS_CSS + CHANNELS_CSS, 'projects-assets'),
     () => installCompiledStyles(SCHEDULE_CSS, 'schedules'),
     () => installCompiledStyles(FEEDBACK_CSS, 'feedback'),
     () => installCompiledStyles(ABOUT_CSS, 'about'),

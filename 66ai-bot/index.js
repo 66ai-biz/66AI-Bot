@@ -15,6 +15,11 @@ import * as roster from './src/host/roster.js'
 import * as folders from './src/host/folders.js'
 import * as projects from './src/host/projects.js'
 import * as assets from './src/host/assets.js'
+import * as imChannels from './src/host/im-channels.js'
+import * as imTelegram from './src/host/im/telegram.js'
+import * as imDiscord from './src/host/im/discord.js'
+import * as imFeishu from './src/host/im/feishu.js'
+import * as imDingtalk from './src/host/im/dingtalk.js'
 import * as privacy from './src/host/privacy.js'
 import * as agents from './src/host/agents.js'
 import * as prompt from './src/host/prompt.js'
@@ -53,7 +58,7 @@ export const inject = ['llm', 'tools', 'systemPrompt', 'sessionController', 'ses
 // install. Listeners run and tools are listed in registration order, so this order holds:
 // usage meters model requests after every listener that rewrites them. privacy checks a
 // call before the hooks of tools do, so a closed call never reaches a card they show.
-const MODULES = [diagnostics, store, models, providers, permissions, turns, handoffs, requests, delivery, roster, folders, projects, assets, privacy, agents, prompt, timeContext, tools, chatIndex, groups, approvals, resume, memory, parts, images, avatarLibrary, secrets, connectors, capabilities, learning, schedules, browser, browserPlugins, usage, update, dshUpdate, thinking, feed, channel, officeSkills]
+const MODULES = [diagnostics, store, models, providers, permissions, turns, handoffs, requests, delivery, roster, folders, projects, assets, imChannels, privacy, agents, prompt, timeContext, tools, chatIndex, groups, approvals, resume, memory, parts, images, avatarLibrary, secrets, connectors, capabilities, learning, schedules, browser, browserPlugins, usage, update, dshUpdate, thinking, feed, channel, officeSkills]
 
 export function apply(ctx, config = {}) {
   createRuntime(ctx, config)
@@ -74,5 +79,9 @@ export function createRuntime(ctx, config = {}) {
     },
   }
   for (const module of MODULES) module.install(rt)
+  // The platform adapters are plain objects; the channels module stays testable
+  // without them. Stopping the plugin stops every channel connection.
+  rt.imAdaptersSetter?.({ telegram: imTelegram.telegram, discord: imDiscord.discord, feishu: imFeishu.feishu, dingtalk: imDingtalk.dingtalk })
+  ctx.effect(() => () => rt.imStopAll?.(), '66ai-bot: IM channels')
   return rt
 }

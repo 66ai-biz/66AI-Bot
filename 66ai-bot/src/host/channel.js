@@ -99,7 +99,7 @@ export function install(rt) {
   })
   // What a host that only reads the team may still answer.
   // Updates change the dsh profile, not the team, so a reading host may run them too.
-  const READS = new Set(['state', 'models', 'efforts', 'providers', 'provider-models', 'earlier', 'chat', 'run-stats', 'room-progress', 'exchange', 'exchange-text', 'file-text', 'usage', 'schedules', 'memory-view', 'browser-wait', 'browser-result', 'diagnostics', 'diagnostics-log', 'diagnostics-clear', 'update-check', 'update-install', 'dsh-update-install', 'repo-stars', 'approval-answer', 'thinking', 'avatar-library', 'projects', 'assets', 'asset-read'])
+  const READS = new Set(['state', 'models', 'efforts', 'providers', 'provider-models', 'earlier', 'chat', 'run-stats', 'room-progress', 'exchange', 'exchange-text', 'file-text', 'usage', 'schedules', 'memory-view', 'browser-wait', 'browser-result', 'diagnostics', 'diagnostics-log', 'diagnostics-clear', 'update-check', 'update-install', 'dsh-update-install', 'repo-stars', 'approval-answer', 'thinking', 'avatar-library', 'projects', 'assets', 'asset-read', 'im-channels'])
 
   function setPrefs(body) {
     if (body.theme !== undefined) {
@@ -150,6 +150,7 @@ export function install(rt) {
         case 'state':
           if (typeof body.locale === 'string' && /^[a-z]{2,3}(-[\w-]+)?$/i.test(body.locale)) uiLocale = body.locale
           if (readOnly === undefined) await rt.bootstrap()
+          void rt.imEnsureStarted?.()
           await rt.catalog()
           await rt.loadSecrets()
           if (body.since === state.revision && (body.models === undefined || body.models === modelsKey())) return ok({ revision: state.revision, unchanged: true, ...live() })
@@ -325,6 +326,21 @@ export function install(rt) {
         case 'asset-reveal':
           await rt.load()
           return ok(await rt.assetReveal(body))
+        // IM channels: Bots on Telegram, Discord, Feishu and DingTalk.
+        case 'im-channels':
+          await rt.load()
+          return ok(rt.imChannelsView())
+        case 'im-channel-save':
+          await rt.load()
+          return ok(await rt.imEndpoint('im-channel-save', body))
+        case 'im-channel-toggle':
+          await rt.load()
+          return ok(await rt.imEndpoint('im-channel-toggle', body))
+        case 'im-channel-delete':
+          await rt.load()
+          return ok(await rt.imEndpoint('im-channel-delete', body))
+        case 'im-channel-test':
+          return ok(await rt.imEndpoint('im-channel-test', body))
         case 'add-agent':
           await rt.load()
           return ok(await rt.addAgent())
