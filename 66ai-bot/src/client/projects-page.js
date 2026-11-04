@@ -25,6 +25,9 @@ export const PROJECTS_CSS = `
 .bt-pj-add select{height:26px;max-width:220px;border:.5px solid var(--bt-line-2);border-radius:8px;background:var(--bt-card);color:var(--bt-ink);font:inherit;font-size:12px;padding:0 6px}
 .bt-pj-new{display:flex;gap:8px;align-items:center}
 .bt-pj-new input{flex:1;height:30px;min-width:120px;border:.5px solid var(--bt-line-2);border-radius:8px;background:var(--bt-card);color:var(--bt-ink);font:inherit;font-size:13px;padding:0 10px}
+.bt-pj-new-folder{margin-top:6px}
+.bt-pj-new-folder input{flex:1 1 260px;height:28px;font-size:12px;font-family:ui-monospace,Consolas,monospace}
+.bt-pj-new-hint{flex-basis:100%;color:var(--bt-ink-2);font-size:11px;padding-left:2px}
 .bt-pj-empty{padding:18px 14px;border:.5px dashed var(--bt-line-2);border-radius:12px;color:var(--bt-ink-2);font-size:12.5px;text-align:center}
 `
 
@@ -71,6 +74,7 @@ const ProjectRow = ({ project, roster, actions, run, onRenamed, onDeleted }) => 
 export function ProjectsPage({ roster, actions, run, Section }) {
   const [view, setView] = useState(null)
   const [name, setName] = useState('')
+  const [folder, setFolder] = useState('')
   const [busy, setBusy] = useState(false)
   const reload = async () => { try { setView(await actions.projects()) } catch { /* the page stays empty; the host may predate projects */ } }
   useEffect(() => { void reload() }, [])
@@ -78,7 +82,7 @@ export function ProjectsPage({ roster, actions, run, Section }) {
     const clean = name.trim()
     if (clean === '' || busy) return
     setBusy(true)
-    if (await run(actions.projectCreate(clean).then(result => { setName(''); return result }))) await reload()
+    if (await run(actions.projectCreate(clean, folder).then(result => { setName(''); setFolder(''); return result }))) await reload()
     setBusy(false)
   }
   if (view === null) return null
@@ -93,6 +97,9 @@ export function ProjectsPage({ roster, actions, run, Section }) {
     h('div', { key: 'new', className: 'bt-actions' },
       h('div', { className: 'bt-pj-new' },
         h('input', { value: name, placeholder: t('Project name'), maxLength: 60, 'aria-label': t('Project name'), onChange: event => setName(event.target.value), onKeyDown: event => { if (event.key === 'Enter' && !event.nativeEvent.isComposing) void create() } }),
-        h('button', { type: 'button', className: 'bt-soft bt-soft-sm', disabled: busy || name.trim() === '', onClick: () => void create() }, t('Create project')))),
+        h('button', { type: 'button', className: 'bt-soft bt-soft-sm', disabled: busy || name.trim() === '', onClick: () => void create() }, t('Create project'))),
+      h('div', { className: 'bt-pj-new bt-pj-new-folder' },
+        h('input', { value: folder, placeholder: t('Storage folder (empty = default: {folder})', { folder: view.teamFolder ?? '' }), 'aria-label': t('Storage folder'), onChange: event => setFolder(event.target.value), onKeyDown: event => { if (event.key === 'Enter' && !event.nativeEvent.isComposing) void create() }, spellCheck: false }),
+        h('span', { className: 'bt-pj-new-hint' }, t('Leave empty to use the default; enter another drive or folder, like E:\\AIbot\\projects')))),
   ]
 }

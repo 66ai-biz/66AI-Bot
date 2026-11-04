@@ -158,3 +158,42 @@ test('deleting a project keeps its folder and clears membership', async () => {
     await app.stop()
   }
 })
+
+test('a project can live in a custom folder on another drive path', async () => {
+  const app = start()
+  // A second tree outside the team workspace stands in for "another drive".
+  const custom = realpathSync(mkdtempSync(join(tmpdir(), '66ai-bot-custom-')))
+  try {
+    const made = await app.call('project-create', { name: '大项目', folder: custom })
+    const project = made.value.project
+    // The host stores the folder as an fs.realpath; expand the custom parent the same way.
+    assert.ok(project.folder.startsWith(await realpath(custom)), 'the project folder sits in the custom parent')
+    assert.ok(!project.folder.startsWith(app.workspace), 'it is not inside the team workspace')
+    assert.ok(existsSync(project.folder), 'the folder exists on disk')
+    // A Bot born into it works in the custom folder too.
+    const born = await app.call('create-bot', { name: 'mover', projectId: project.id })
+    assert.equal(born.value.workDir, project.folder)
+    const view = await app.call('projects', {})
+    assert.equal(view.value.projects[0].folder, project.folder)
+  } finally {
+    rmSync(custom, { recursive: true, force: true, maxRetries: 5 })
+    await app.stop()
+  }
+})
+
+test('a custom folder must be absolute and sane', async () => {
+  const app = start()
+  try {
+    const relative = await app.call('project-create', { name: 'bad1', folder: 'relative/path' })
+    assert.ok(relative.error !== undefined || relative.failure !== undefined, 'a relative folder is refused')
+    const sneaky = await app.call('project-create', { name: 'bad2', folder: 'E:\\x<bad>' })
+    assert.ok(sneaky.error !== undefined || sneaky.failure !== undefined, 'forbidden characters are refused')
+    const view = await app.call('projects', {})
+    assert.equal(view.value.projects.length, 0, 'nothing was created')
+    // An empty string falls back to the team workspace default.
+    const made = await app.call('project-create', { name: 'default-place', folder: '   ' })
+    assert.ok(made.value.project.folder.startsWith(await realpath(app.workspace)), 'empty folder falls back to the workspace')
+  } finally {
+    await app.stop()
+  }
+})

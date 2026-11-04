@@ -4,6 +4,12 @@ All notable changes to 66AI Bot are listed here. The format follows [Keep a Chan
 
 ## [Unreleased]
 
+## [0.2.16] - 2026-11-04
+
+### Added
+
+- New projects may choose where they live: the Projects page grows a storage-folder field next to the name, accepting any absolute path (another drive, a UNC share), with an empty value keeping the default team workspace. The host validates the parent (absolute path, no forbidden characters) and records the expanded real path, so a Bot born into the project works there.
+
 ## [0.2.15] - 2026-11-04
 
 ### Added

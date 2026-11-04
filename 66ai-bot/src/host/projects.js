@@ -20,6 +20,18 @@ export const nameProblem = (name) => {
   return undefined
 }
 
+// An optional parent folder the project may live in instead of the team workspace:
+// a Windows drive path, a UNC share, or a POSIX absolute path. Relative paths are
+// refused — the folder must resolve the same no matter where the app runs from.
+export const folderProblem = (folder) => {
+  const text = String(folder ?? '').trim()
+  if (text === '') return undefined
+  if (text.length > 240) return 'The folder path is too long (at most 240 characters)'
+  if (!/^(?:[A-Za-z]:[\\/]|\\\\|\/)/.test(text)) return 'The folder must be an absolute path, like E:\\AIbot\\projects'
+  if (/[*?"<>|\x00-\x1f]/.test(text)) return 'The folder path cannot contain * ? " < > |'
+  return undefined
+}
+
 export function install(rt) {
   const { ctx, state } = rt
   state.projects = state.projects ?? {}
@@ -48,13 +60,17 @@ export function install(rt) {
     return { teamFolder: teamFolder() ?? null, projects: entries }
   }
 
-  async function projectCreate({ name } = {}) {
+  async function projectCreate({ name, folder: parent } = {}) {
     const problem = nameProblem(name)
     if (problem !== undefined) throw new Error(problem)
     const clean = String(name).trim()
     const clash = Object.values(table()).find(project => project.name.toLowerCase() === clean.toLowerCase())
     if (clash !== undefined) throw new Error(`A project named ${clean} already exists`)
-    const base = teamFolder()
+    const custom = String(parent ?? '').trim()
+    const folderProblemText = folderProblem(custom)
+    if (folderProblemText !== undefined) throw new Error(folderProblemText)
+    // A custom parent wins; otherwise the project lands in the team workspace as before.
+    const base = custom !== '' ? custom : teamFolder()
     if (base === undefined) throw new Error('No team workspace is set, so a project folder cannot be made')
     const folder = join(resolve(base), clean)
     await mkdir(folder, { recursive: true })

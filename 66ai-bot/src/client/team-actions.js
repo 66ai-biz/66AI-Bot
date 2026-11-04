@@ -99,7 +99,7 @@ export function teamActions({ call, after, partFor, roster, ui, live, cards, hel
     folderList: path => call('folder-list', { path: path ?? '' }),
     setTeamWorkspace: path => after(call('team-workspace', { path })),
     projects: (options = {}) => call('projects', options),
-    projectCreate: name => after(call('project-create', { name })),
+    projectCreate: (name, folder) => after(call('project-create', { name, folder: (folder ?? '').trim() !== '' ? folder.trim() : undefined })),
     projectRename: (id, name) => after(call('project-rename', { id, name })),
     projectDelete: id => after(call('project-delete', { id })),
     projectOpen: id => call('project-open', { id }),
