@@ -1,0 +1,64 @@
+name: Release macOS
+
+# Builds the desktop app for macOS (Apple Silicon + Intel) and attaches the zips
+# to an existing release. Trigger manually from the Actions tab (Run workflow):
+# leave attach_tag empty for a dry build (artifacts only), or set e.g. v0.2.5
+# to upload the zips straight to that release.
+
+on:
+  workflow_dispatch:
+    inputs:
+      attach_tag:
+        description: 'Release tag to attach the zips to (e.g. v0.2.5). Empty = artifacts only.'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-macos
+  cancel-in-progress: false
+
+jobs:
+  app-macos:
+    name: Desktop app zip (macOS ${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { arch: arm64, runner: macos-latest }
+          - { arch: x64, runner: macos-26-intel }
+    defaults:
+      run:
+        shell: bash
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm ci --no-fund --no-audit
+      - run: npm run dist
+      - name: Check the packaged app
+        run: node scripts/check-packed.mjs
+      - name: Attach the zip to the release
+        if: inputs.attach_tag != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.attach_tag }}
+        run: |
+          zip="dist-pack/66ai-bot-$(node -p "require('./package.json').version")-mac-${{ matrix.arch }}.zip"
+          gh release upload "$TAG" "$zip" --clobber
+          echo "attached $zip to $TAG"
+      - name: Keep the zip as an artifact
+        if: inputs.attach_tag == ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: 66ai-bot-mac-${{ matrix.arch }}
+          path: app/dist-pack/66ai-bot-*-mac-${{ matrix.arch }}.zip
+          retention-days: 7
+          if-no-files-found: error
+          compression-level: 0
