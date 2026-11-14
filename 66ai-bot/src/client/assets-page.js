@@ -97,7 +97,7 @@ const Tile = ({ entry, projectOf, onOpen, copied, onCopy }) => {
       onClick: () => { if (openable) onOpen(entry) },
     },
       preview !== null ? h('img', { src: preview, alt: entry.name, loading: 'lazy' })
-        : h(kindIcon(entry.kind, entry.ext)),
+        : kindIcon(entry.kind, entry.ext),
       h('span', { className: 'bt-as-ext' }, entry.ext.replace('.', '') || entry.kind)),
     h('div', { className: 'bt-as-name' }, entry.name),
     h('div', { className: 'bt-as-meta' },

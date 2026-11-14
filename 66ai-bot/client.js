@@ -1122,6 +1122,12 @@ var ZH = {
   "Projects · {count}": "项目 · {count}",
   "Project name": "项目名称",
   "Create project": "创建项目",
+  "Storage folder": "存储位置",
+  "Storage folder (empty = default: {folder})": "存储位置（留空 = 默认：{folder}）",
+  "Leave empty to use the default; enter another drive or folder, like E:\\AIbot\\projects": "留空使用默认位置；也可填其他盘或文件夹，如 E:\\AIbot\\projects",
+  "The folder must be an absolute path, like E:\\AIbot\\projects": "存储位置必须是绝对路径，如 E:\\AIbot\\projects",
+  'The folder path cannot contain * ? " < > |': '存储位置不能包含 * ? " < > | 字符',
+  "The folder path is too long (at most 240 characters)": "存储位置过长（最多 240 字符）",
   "Rename project": "重命名项目",
   "Delete project": "删除项目",
   "Open folder": "打开文件夹",
@@ -1743,7 +1749,7 @@ function teamActions({ call: call2, after, partFor, roster, ui: ui2, live, cards
     folderList: (path) => call2("folder-list", { path: path ?? "" }),
     setTeamWorkspace: (path) => after(call2("team-workspace", { path })),
     projects: (options = {}) => call2("projects", options),
-    projectCreate: (name) => after(call2("project-create", { name })),
+    projectCreate: (name, folder) => after(call2("project-create", { name, folder: (folder ?? "").trim() !== "" ? folder.trim() : void 0 })),
     projectRename: (id, name) => after(call2("project-rename", { id, name })),
     projectDelete: (id) => after(call2("project-delete", { id })),
     projectOpen: (id) => call2("project-open", { id }),
@@ -16694,6 +16700,9 @@ var PROJECTS_CSS = `
 .bt-pj-add select{height:26px;max-width:220px;border:.5px solid var(--bt-line-2);border-radius:8px;background:var(--bt-card);color:var(--bt-ink);font:inherit;font-size:12px;padding:0 6px}
 .bt-pj-new{display:flex;gap:8px;align-items:center}
 .bt-pj-new input{flex:1;height:30px;min-width:120px;border:.5px solid var(--bt-line-2);border-radius:8px;background:var(--bt-card);color:var(--bt-ink);font:inherit;font-size:13px;padding:0 10px}
+.bt-pj-new-folder{margin-top:6px}
+.bt-pj-new-folder input{flex:1 1 260px;height:28px;font-size:12px;font-family:ui-monospace,Consolas,monospace}
+.bt-pj-new-hint{flex-basis:100%;color:var(--bt-ink-2);font-size:11px;padding-left:2px}
 .bt-pj-empty{padding:18px 14px;border:.5px dashed var(--bt-line-2);border-radius:12px;color:var(--bt-ink-2);font-size:12.5px;text-align:center}
 `;
 var ProjectRow = ({ project, roster, actions, run: run2, onRenamed, onDeleted }) => {
@@ -16773,6 +16782,7 @@ var ProjectRow = ({ project, roster, actions, run: run2, onRenamed, onDeleted })
 function ProjectsPage({ roster, actions, run: run2, Section }) {
   const [view, setView] = (0, import_react44.useState)(null);
   const [name, setName] = (0, import_react44.useState)("");
+  const [folder, setFolder] = (0, import_react44.useState)("");
   const [busy, setBusy] = (0, import_react44.useState)(false);
   const reload = async () => {
     try {
@@ -16787,8 +16797,9 @@ function ProjectsPage({ roster, actions, run: run2, Section }) {
     const clean = name.trim();
     if (clean === "" || busy) return;
     setBusy(true);
-    if (await run2(actions.projectCreate(clean).then((result) => {
+    if (await run2(actions.projectCreate(clean, folder).then((result) => {
       setName("");
+      setFolder("");
       return result;
     }))) await reload();
     setBusy(false);
@@ -16819,6 +16830,14 @@ function ProjectsPage({ roster, actions, run: run2, Section }) {
           if (event.key === "Enter" && !event.nativeEvent.isComposing) void create();
         } }),
         (0, import_react44.createElement)("button", { type: "button", className: "bt-soft bt-soft-sm", disabled: busy || name.trim() === "", onClick: () => void create() }, t("Create project"))
+      ),
+      (0, import_react44.createElement)(
+        "div",
+        { className: "bt-pj-new bt-pj-new-folder" },
+        (0, import_react44.createElement)("input", { value: folder, placeholder: t("Storage folder (empty = default: {folder})", { folder: view.teamFolder ?? "" }), "aria-label": t("Storage folder"), onChange: (event) => setFolder(event.target.value), onKeyDown: (event) => {
+          if (event.key === "Enter" && !event.nativeEvent.isComposing) void create();
+        }, spellCheck: false }),
+        (0, import_react44.createElement)("span", { className: "bt-pj-new-hint" }, t("Leave empty to use the default; enter another drive or folder, like E:\\AIbot\\projects"))
       )
     )
   ];
@@ -16943,7 +16962,7 @@ var Tile = ({ entry, projectOf, onOpen, copied, onCopy }) => {
           if (openable) onOpen(entry);
         }
       },
-      preview !== null ? (0, import_react45.createElement)("img", { src: preview, alt: entry.name, loading: "lazy" }) : (0, import_react45.createElement)(kindIcon(entry.kind, entry.ext)),
+      preview !== null ? (0, import_react45.createElement)("img", { src: preview, alt: entry.name, loading: "lazy" }) : kindIcon(entry.kind, entry.ext),
       (0, import_react45.createElement)("span", { className: "bt-as-ext" }, entry.ext.replace(".", "") || entry.kind)
     ),
     (0, import_react45.createElement)("div", { className: "bt-as-name" }, entry.name),
