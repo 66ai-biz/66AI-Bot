@@ -1098,6 +1098,7 @@ const ZH = {
   'No projects yet. A project is a folder under the team workspace; the Bots in it work there, and their files land in it.': '还没有项目。项目是团队工作区里的一个文件夹：项目里的 Bot 在这里工作，产出的文件也落在这里。',
   'No assets yet. Files the Bots make in the team workspace and project folders show up here.': '还没有资产。Bot 在团队工作区和项目文件夹里产出的文件会显示在这里。',
   '{shown} of {total}': '{shown}/{total}',
+  'This format cannot be played here; open its folder instead': '这种格式无法在这里播放，请打开所在文件夹',
   // Channels: Bots on Telegram, Discord, Feishu and DingTalk.
   Channels: '渠道',
   'Channels · {count}': '渠道 · {count}',

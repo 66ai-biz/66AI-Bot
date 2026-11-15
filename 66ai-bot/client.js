@@ -1144,6 +1144,7 @@ var ZH = {
   "No projects yet. A project is a folder under the team workspace; the Bots in it work there, and their files land in it.": "还没有项目。项目是团队工作区里的一个文件夹：项目里的 Bot 在这里工作，产出的文件也落在这里。",
   "No assets yet. Files the Bots make in the team workspace and project folders show up here.": "还没有资产。Bot 在团队工作区和项目文件夹里产出的文件会显示在这里。",
   "{shown} of {total}": "{shown}/{total}",
+  "This format cannot be played here; open its folder instead": "这种格式无法在这里播放，请打开所在文件夹",
   // Channels: Bots on Telegram, Discord, Feishu and DingTalk.
   Channels: "渠道",
   "Channels · {count}": "渠道 · {count}",
@@ -16917,6 +16918,7 @@ var humanDay = (ms) => {
   return sameYear ? day : `${date.getFullYear()}-${day}`;
 };
 var KIND_TABS = [["all", "All"], ["image", "Images"], ["video", "Videos"], ["audio", "Audio"], ["document", "Documents"], ["other", "Other"]];
+var VIDEO_PREVIEW_LIMIT = 32 * 1024 * 1024;
 var kindIcon = (kind, ext) => kind === "video" ? (0, import_react45.createElement)(FilmIcon) : kind === "audio" ? (0, import_react45.createElement)(MusicIcon) : kind === "document" ? (0, import_react45.createElement)(DocIcon) : kind === "image" ? (0, import_react45.createElement)(GalleryIcon) : (0, import_react45.createElement)(FileIcon);
 var Tile = ({ entry, projectOf, onOpen, copied, onCopy }) => {
   const ref = (0, import_react45.useRef)(null);
@@ -16937,7 +16939,8 @@ var Tile = ({ entry, projectOf, onOpen, copied, onCopy }) => {
   }, [visible]);
   (0, import_react45.useEffect)(() => {
     if (!visible || preview !== null || failed) return;
-    if (entry.kind !== "image") return;
+    if (entry.kind !== "image" && entry.kind !== "video") return;
+    if (entry.kind === "video" && entry.size > VIDEO_PREVIEW_LIMIT) return;
     let alive = true;
     call("asset-read", { path: entry.path }).then((result) => {
       if (alive) setPreview(`data:${result.mime};base64,${result.data}`);
@@ -16947,8 +16950,8 @@ var Tile = ({ entry, projectOf, onOpen, copied, onCopy }) => {
     return () => {
       alive = false;
     };
-  }, [visible, preview, failed, entry.path, entry.kind]);
-  const openable = entry.kind === "video" || entry.kind === "audio" ? entry.size <= (entry.kind === "video" ? 32 * 1024 * 1024 : 24 * 1024 * 1024) : entry.kind === "image";
+  }, [visible, preview, failed, entry.path, entry.kind, entry.size]);
+  const openable = entry.kind === "video" || entry.kind === "audio" ? entry.size <= (entry.kind === "video" ? VIDEO_PREVIEW_LIMIT : 24 * 1024 * 1024) : entry.kind === "image";
   return (0, import_react45.createElement)(
     "div",
     { className: "bt-as-card", ref },
@@ -16962,7 +16965,7 @@ var Tile = ({ entry, projectOf, onOpen, copied, onCopy }) => {
           if (openable) onOpen(entry);
         }
       },
-      preview !== null ? (0, import_react45.createElement)("img", { src: preview, alt: entry.name, loading: "lazy" }) : kindIcon(entry.kind, entry.ext),
+      preview !== null && entry.kind === "image" ? (0, import_react45.createElement)("img", { src: preview, alt: entry.name, loading: "lazy" }) : preview !== null && entry.kind === "video" ? (0, import_react45.createElement)("video", { src: preview, muted: true, preload: "auto", playsInline: true, onError: () => setFailed(true) }) : kindIcon(entry.kind, entry.ext),
       (0, import_react45.createElement)("span", { className: "bt-as-ext" }, entry.ext.replace(".", "") || entry.kind)
     ),
     (0, import_react45.createElement)("div", { className: "bt-as-name" }, entry.name),
@@ -17082,7 +17085,7 @@ var AssetViewer = ({ entry, onClose }) => {
       "div",
       { className: "bt-as-viewer-box", onClick: (event) => event.stopPropagation() },
       (0, import_react45.createElement)("button", { type: "button", className: "bt-as-viewer-close", "aria-label": t("Close"), onClick: onClose }, (0, import_react45.createElement)(CloseIcon)),
-      error !== null ? (0, import_react45.createElement)("div", { className: "bt-as-viewer-cap" }, error) : url === null ? (0, import_react45.createElement)("div", { className: "bt-as-viewer-cap" }, "…") : entry.kind === "video" ? (0, import_react45.createElement)("video", { src: url, controls: true, autoPlay: true }) : entry.kind === "audio" ? (0, import_react45.createElement)("audio", { src: url, controls: true, autoPlay: true }) : (0, import_react45.createElement)("img", { src: url, alt: entry.name }),
+      error !== null ? (0, import_react45.createElement)("div", { className: "bt-as-viewer-cap" }, error) : url === null ? (0, import_react45.createElement)("div", { className: "bt-as-viewer-cap" }, "…") : entry.kind === "video" ? (0, import_react45.createElement)("video", { src: url, controls: true, autoPlay: true, onError: () => setError(t("This format cannot be played here; open its folder instead")) }) : entry.kind === "audio" ? (0, import_react45.createElement)("audio", { src: url, controls: true, autoPlay: true }) : (0, import_react45.createElement)("img", { src: url, alt: entry.name }),
       (0, import_react45.createElement)("div", { className: "bt-as-viewer-cap" }, entry.name)
     )
   );

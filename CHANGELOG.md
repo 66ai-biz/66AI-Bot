@@ -4,6 +4,16 @@ All notable changes to 66AI Bot are listed here. The format follows [Keep a Chan
 
 ## [Unreleased]
 
+## [0.2.17] - 2026-11-15
+
+### Added
+
+- Videos preview in the Assets gallery: tiles load a first-frame thumbnail for mp4/webm and friends (up to 32 MB) the same way pictures do, and clicking one opens the in-app player; formats the embedded player cannot decode fall back to the file icon, and the player explains when a format cannot be played.
+
+### Fixed
+
+- The Assets page no longer tears the settings dialog down when it shows real files: a file tile wrapped an already-created React element in a second createElement, so rendering the first tile with anything in the workspace threw (minified error #130) and the error boundary unmounted the whole dialog. Empty workspaces never hit the branch, which is why it went unnoticed.
+
 ## [0.2.16] - 2026-11-04
 
 ### Added

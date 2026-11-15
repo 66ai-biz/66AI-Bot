@@ -64,6 +64,10 @@ const humanDay = ms => {
 
 const KIND_TABS = [['all', 'All'], ['image', 'Images'], ['video', 'Videos'], ['audio', 'Audio'], ['document', 'Documents'], ['other', 'Other']]
 
+// Videos at or under this size travel through the api as base64, both for the tile's
+// first-frame thumbnail and the player; bigger ones stay "open the folder".
+const VIDEO_PREVIEW_LIMIT = 32 * 1024 * 1024
+
 const kindIcon = (kind, ext) => kind === 'video' ? h(FilmIcon) : kind === 'audio' ? h(MusicIcon)
   : kind === 'document' ? h(DocIcon) : kind === 'image' ? h(GalleryIcon) : h(FileIcon)
 
@@ -85,18 +89,20 @@ const Tile = ({ entry, projectOf, onOpen, copied, onCopy }) => {
   }, [visible])
   useEffect(() => {
     if (!visible || preview !== null || failed) return
-    if (entry.kind !== 'image') return
+    if (entry.kind !== 'image' && entry.kind !== 'video') return
+    if (entry.kind === 'video' && entry.size > VIDEO_PREVIEW_LIMIT) return
     let alive = true
     call('asset-read', { path: entry.path }).then(result => { if (alive) setPreview(`data:${result.mime};base64,${result.data}`) }, () => { if (alive) setFailed(true) })
     return () => { alive = false }
-  }, [visible, preview, failed, entry.path, entry.kind])
-  const openable = entry.kind === 'video' || entry.kind === 'audio' ? entry.size <= (entry.kind === 'video' ? 32 * 1024 * 1024 : 24 * 1024 * 1024) : entry.kind === 'image'
+  }, [visible, preview, failed, entry.path, entry.kind, entry.size])
+  const openable = entry.kind === 'video' || entry.kind === 'audio' ? entry.size <= (entry.kind === 'video' ? VIDEO_PREVIEW_LIMIT : 24 * 1024 * 1024) : entry.kind === 'image'
   return h('div', { className: 'bt-as-card', ref },
     h('button', {
       type: 'button', className: 'bt-as-thumb', title: entry.name,
       onClick: () => { if (openable) onOpen(entry) },
     },
-      preview !== null ? h('img', { src: preview, alt: entry.name, loading: 'lazy' })
+      preview !== null && entry.kind === 'image' ? h('img', { src: preview, alt: entry.name, loading: 'lazy' })
+        : preview !== null && entry.kind === 'video' ? h('video', { src: preview, muted: true, preload: 'auto', playsInline: true, onError: () => setFailed(true) })
         : kindIcon(entry.kind, entry.ext),
       h('span', { className: 'bt-as-ext' }, entry.ext.replace('.', '') || entry.kind)),
     h('div', { className: 'bt-as-name' }, entry.name),
@@ -178,7 +184,7 @@ const AssetViewer = ({ entry, onClose }) => {
       h('button', { type: 'button', className: 'bt-as-viewer-close', 'aria-label': t('Close'), onClick: onClose }, h(CloseIcon)),
       error !== null ? h('div', { className: 'bt-as-viewer-cap' }, error)
         : url === null ? h('div', { className: 'bt-as-viewer-cap' }, '…')
-          : entry.kind === 'video' ? h('video', { src: url, controls: true, autoPlay: true })
+          : entry.kind === 'video' ? h('video', { src: url, controls: true, autoPlay: true, onError: () => setError(t('This format cannot be played here; open its folder instead')) })
             : entry.kind === 'audio' ? h('audio', { src: url, controls: true, autoPlay: true })
               : h('img', { src: url, alt: entry.name }),
       h('div', { className: 'bt-as-viewer-cap' }, entry.name)))
