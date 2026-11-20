@@ -132,7 +132,14 @@ export function todayStamp(now = new Date()) {
   return `${String(now.getFullYear())}-${month}-${day}`
 }
 
-/** Whether `account` may use the app, with the facts the paywall pages show. */
+/** Whether `account` may use the app, with the facts the paywall pages show.
+ *
+ * 2026-11-20: any registered user may sign in and test the app — each request
+ * spends 1 point (the cloud deducts the text pool, falling back to the universal
+ * one), and the paywall only returns once the points are gone. A subscribed plan
+ * (any of the three 66AI Bot tiers, or an active text/analysis subscription) and
+ * administrators stay unlimited: `mode` is 'plan' | 'test' | 'exhausted', and
+ * `testPoints` counts the points a test account can still spend (-1 = unlimited). */
 export function planState(account) {
   const source = account ?? loadSession()
   const subTextUntil = String(source?.subTextUntil ?? '')
@@ -141,16 +148,24 @@ export function planState(account) {
   const subBotLiteUntil = String(source?.subBotLiteUntil ?? '')
   const admin = source?.isAdmin === true
   if (typeof source?.username !== 'string' || source.username === '') {
-    return { allowed: false, admin, subBotUntil, subBotLiteUntil, subTextUntil, subAnalysisUntil }
+    return { allowed: false, admin, mode: 'signed-out', testPoints: 0, subBotUntil, subBotLiteUntil, subTextUntil, subAnalysisUntil }
   }
-  if (admin) return { allowed: true, admin, subBotUntil, subBotLiteUntil, subTextUntil, subAnalysisUntil }
   const today = todayStamp()
+  const hasPlan = admin || subBotUntil >= today || subBotLiteUntil >= today
+    || subTextUntil >= today || subAnalysisUntil >= today
+  if (hasPlan) {
+    return { allowed: true, admin, mode: 'plan', testPoints: -1, subBotUntil, subBotLiteUntil, subTextUntil, subAnalysisUntil }
+  }
+  const points = source?.points ?? {}
+  const testPoints = Math.max(0, Math.trunc(Number(points.universal) || 0))
+    + Math.max(0, Math.trunc(Number(points.text) || 0))
   return {
-    // The app's gate is a subscribed 66AI Bot monthly plan — any of the three tiers
-    // (98 basic / 138 / 198 pro; the cloud stamps the 98 tier in sub_aibot_lite_until).
-    // An administrator may use the app without one.
-    allowed: subBotUntil >= today || subBotLiteUntil >= today,
+    // A registered account without any plan tests the app on its points: allowed
+    // while some remain, and the paywall names the plans once they are gone.
+    allowed: testPoints > 0,
     admin,
+    mode: testPoints > 0 ? 'test' : 'exhausted',
+    testPoints,
     subBotUntil,
     subBotLiteUntil,
     subTextUntil,

@@ -188,7 +188,7 @@ export function ModelMenu({ bot, roster, actions, run, wide = false, onPick, onP
     h(Caret)),
     shownPlace ? createPortal(h('div', { ref: menu, className: `bt-menu bt-model-menu${shownPlace.bottom !== undefined ? ' bt-menu-up' : ''}`, role: 'menu', 'aria-label': t('Model for {name}', { name: bot.name }), style: shownPlace, 'data-leaving': leaving || undefined },
       models.length > 0 ? h(ModelRows, { roster, current, onPick: pick })
-        : h('div', { className: 'bt-model-none' }, t('No models are set up in DeepSeek Harness yet.')),
+        : h('div', { className: 'bt-model-none' }, t('No models are set up in 66AI yet.')),
       effortRows(reasoning).length > 0 ? h(EffortRows, { reasoning, current: picked, onPick: pickEffort }) : null,
       manage ? h('div', { className: 'bt-menu-sep', role: 'separator' }) : null,
       manage ? h('button', { type: 'button', role: 'menuitem', onClick: () => { close(); manage() } }, h(SlidersIcon), h('span', { className: 'bt-menu-label' }, t('Models and providers…'))) : null), document.body) : null)
@@ -281,13 +281,11 @@ function ModelKeyCard({ model, actions }) {
 // Where the providers are set up: the window's own Models page, else DSH's settings.
 const manageModels = actions => actions.openModels ?? actions.openHarnessSettings
 
-// Ways to get a first model. The DeepSeek sign-in exists only where the shell carries
-// its account plugin (the Desktop); the API key and custom models use the shell's
-// own editors.
+// Ways to get a first model. 2026-11-20: the DeepSeek sign-in and API-key entries
+// are gone from the UI — the account and the built-in 66ai provider cover it; custom
+// models use the shell's own editors.
 function setupChoices(actions) {
   return [
-    actions.canSignIn?.() ? [t('Sign in to DeepSeek'), () => actions.signIn()] : null,
-    actions.openHarnessOnboarding ? [t('Enter a DeepSeek API key'), () => actions.openHarnessOnboarding('deepseek-official')] : null,
     actions.openHarnessSettings ? [t('Open settings to set up a custom model'), actions.openHarnessSettings] : null,
   ].filter(Boolean)
 }

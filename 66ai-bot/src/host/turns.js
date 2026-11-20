@@ -2,10 +2,24 @@
 // triggered, the waiters and inboxes of group rounds, and routing a finished turn's reply.
 //
 // Turn tracking: which turns were triggered by another Bot, and what they said.
+import { appendFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { HANDOFF_ACK, MESSAGE_INLINE_MAX, REFERENCE_KIND, REPLY_KIND, SOURCE_KIND } from './constants.js'
 import { absoluteLinks } from './links.js'
 import { textOf } from './text.js'
 import { reminderText } from './schedules.js'
+
+// Test-mode billing (2026-11-20): every user request that reaches a model appends one
+// line to <DSH_HOME>/usage-ticks.local, and the desktop app polls the file with a byte
+// offset to report the ticks as point spends (the paywall returns when the points are
+// gone). Best-effort: a billing failure never blocks the message itself.
+function tickBilling() {
+  try {
+    const home = process.env.DSH_HOME
+    if (!home) return
+    appendFileSync(join(home, 'usage-ticks.local'), `${JSON.stringify({ t: Date.now() })}\n`)
+  } catch { /* billing must not block the turn */ }
+}
 
 // A failed turn's `LlmFailure`, kept to what can be shown and logged. Like DSH's own
 // error row, an AUTH failure loses its message: providers may echo part of the key.
@@ -492,6 +506,7 @@ export function install(rt) {
         } else if (source?.kind === REFERENCE_KIND && rt.roomOf(id)) {
           attachReference(roomInbox.get(id), source, textOf(event.data.content))
         } else if (source?.kind === 'user' || source?.kind === REPLY_KIND) {
+          tickBilling()
           if (rt.roomOf(id) && source.kind === 'user') {
             const content = Array.isArray(event.data.content) ? event.data.content : []
             const images = content.filter(block => block?.type === 'image' && !block.offloaded).map(block => block.attachment)
@@ -519,6 +534,7 @@ export function install(rt) {
         // a send that never queued.
         if (event.data?.target === 'next-step' && entry.turn !== undefined
           && (event.data.inserted ?? []).some(message => message?.source?.kind === 'user')) {
+          tickBilling()
           entry.steeredAt = event.time ?? Date.now()
         }
         break

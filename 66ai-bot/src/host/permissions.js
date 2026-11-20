@@ -35,7 +35,7 @@ export function install(rt) {
 
   function checkPreset(name, whose) {
     const service = presets()
-    if (service === undefined) throw new Error('Permissions are not available in this DeepSeek Harness')
+    if (service === undefined) throw new Error('Permissions are not available in this 66AI engine')
     const wanted = String(name ?? '').trim()
     if (wanted === SESSION_ONLY) throw new Error(`Auto review applies to one Session only and cannot be ${whose} permission`)
     service.resolve(wanted)

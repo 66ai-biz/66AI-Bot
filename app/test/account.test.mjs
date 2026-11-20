@@ -208,22 +208,34 @@ test('signing out keeps only the device id', async () => {
   rmSync(home, { recursive: true, force: true })
 })
 
-test('the plan gate is a subscribed 66AI Bot plan or an administrator', () => {
+test('the plan gate is a subscribed 66AI Bot plan, points, or an administrator', () => {
   const today = auth.todayStamp()
   const year = '9999-12-31'
   // Without an account there is nothing to allow.
   assert.equal(auth.planState({ username: '' }).allowed, false)
   assert.equal(auth.planState(undefined).allowed, false)
-  // The AIBot plan alone opens the app; the older text/analysis pair does not.
+  // Any of the AIBot plans opens the app unlimited; so does the text/analysis pair.
   assert.equal(auth.planState({ username: 'a', subBotUntil: year }).allowed, true)
-  assert.equal(auth.planState({ username: 'a', subTextUntil: year, subAnalysisUntil: year }).allowed, false)
-  assert.equal(auth.planState({ username: 'a', subBotUntil: '' }).allowed, false)
+  assert.equal(auth.planState({ username: 'a', subBotUntil: year }).mode, 'plan')
+  assert.equal(auth.planState({ username: 'a', subTextUntil: year, subAnalysisUntil: year }).allowed, true)
+  assert.equal(auth.planState({ username: 'a', subTextUntil: year, subAnalysisUntil: year }).mode, 'plan')
   // The plan reads as valid through its expiry day, the cloud's own comparison.
   assert.equal(auth.planState({ username: 'a', subBotUntil: today }).allowed, true)
   const yesterday = auth.todayStamp(new Date(Date.now() - 86_400_000))
   assert.equal(auth.planState({ username: 'a', subBotUntil: yesterday }).allowed, false)
+  // 2026-11-20: a registered account without a plan tests the app on its points —
+  // the text pool plus the universal one — and the paywall returns once they are gone.
+  const testing = auth.planState({ username: 'a', points: { text: 7, universal: 3 } })
+  assert.equal(testing.allowed, true)
+  assert.equal(testing.mode, 'test')
+  assert.equal(testing.testPoints, 10)
+  const exhausted = auth.planState({ username: 'a', subBotUntil: '' })
+  assert.equal(exhausted.allowed, false)
+  assert.equal(exhausted.mode, 'exhausted')
+  assert.equal(exhausted.testPoints, 0)
   // An administrator may use the app without a plan.
   assert.equal(auth.planState({ username: 'a', isAdmin: true }).allowed, true)
+  assert.equal(auth.planState({ username: 'a', isAdmin: true }).mode, 'plan')
   assert.equal(auth.planState({ username: 'a', isAdmin: true }).admin, true)
   // The stamps come back for the paywall to name them.
   const state = auth.planState({ username: 'a', subBotUntil: year, subTextUntil: yesterday })

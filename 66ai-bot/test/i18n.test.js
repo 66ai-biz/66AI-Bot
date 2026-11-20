@@ -21,7 +21,7 @@ test('every literal the client translates has a Chinese entry', () => {
   for (const name of readdirSync(dir).filter(file => file.endsWith('.js'))) {
     const text = readFileSync(new URL(name, dir), 'utf8')
     for (const match of text.matchAll(/\bt\(\s*(['"])((?:\\.|(?!\1).)*)\1/g)) {
-      const key = match[2].replace(/\\'/g, "'")
+      const key = match[2].replace(/\\(.)/g, '$1')
       if (!Object.hasOwn(DICTIONARY.zh, key)) missing.push(`${name}: ${key}`)
     }
   }

@@ -90,7 +90,7 @@ export function CreateBot({ roster, actions, start, brief = '', onBack, canGoBac
       h(ModelMenu, { bot: { id: 'new-bot', name: finalName, model: model || undefined, effort }, roster, actions, wide: true, onPick: ref => { setModel(ref); setEffort(undefined) }, onPickEffort: picked => setEffort(picked ?? null) }),
       h('span', { className: 'bt-note' }, (roster.models ?? []).length > 0
         ? t('The Bot runs on this model. You can change it later in its details.')
-        : t('Add a provider and a model in DeepSeek Harness first, or pick one in the Bot\'s chat later.'))),
+        : t('Add a provider and a model in 66AI first, or pick one in the Bot\'s chat later.'))),
     error ? h('div', { className: 'bt-error', role: 'alert', style: { padding: 0 } }, error) : null,
     h('div', { className: 'bt-create-foot' },
       h('button', { type: 'button', className: 'bt-soft', onClick: onBack }, canGoBack ? t('Back') : t('Cancel')),

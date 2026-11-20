@@ -269,7 +269,7 @@ export function SettingsDialog({ page, id, roster, actions, useUpdate, leaving =
           key, type: 'button', className: 'bt-settings-item', 'aria-current': shown === key ? 'page' : undefined, onClick: () => actions.openSettings(key),
         }, h(PAGE_ICONS[key]), t(text))),
         actions.openHarnessSettings ? h('button', {
-          type: 'button', className: 'bt-settings-item bt-settings-shell', title: t('Models, providers, and the rest of DeepSeek Harness'),
+          type: 'button', className: 'bt-settings-item bt-settings-shell', title: t('Models, providers, and the rest of 66AI'),
           onClick: () => { close(); actions.openHarnessSettings() },
         }, h(SlidersIcon), t('Harness settings')) : null),
       h('div', { className: 'bt-settings-main' },

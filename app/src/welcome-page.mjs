@@ -137,7 +137,7 @@ const introPage = `<!doctype html>
 </html>
 `
 
-const paywallPage = (username, untilText) => `<!doctype html>
+const paywallPage = (username, untilText, pointsText) => `<!doctype html>
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
@@ -152,7 +152,7 @@ const paywallPage = (username, untilText) => `<!doctype html>
     <div class="logo">66</div>
     <div>
       <h1>开通套餐后使用</h1>
-      <p class="sub">账号 ${username} 已登录，但还没有 66AI Bot 包月套餐</p>
+      <p class="sub">账号 ${username} 的测试积分已用完，开通套餐继续使用</p>
     </div>
   </div>
   <section class="plan">
@@ -160,7 +160,7 @@ const paywallPage = (username, untilText) => `<!doctype html>
     <b>⚡ 66AI Bot 包月 · 138 元/月（AIBot 专用 · 配置 3 个 Agent，含第三方共 5 个）</b><br>
     <b>⚡ 66AI Bot 包月 Pro · 198 元/月（配置 10 个 Agent，第三方 Agent 不限量）</b><br>
     66AI Bot 桌面版：一台电脑上一整支 AI Bot 团队，内置 GLM 5.3 等多模型开箱即用，包月期内无限使用，模型 Key 由云端自动下发无需手动填写；审核通过自动开通，全平台统一账号一号通行。
-    <div class="planNote">已开通的套餐：${untilText}。在统一账号站（cm.66ai.biz/pay）完成支付后，回到这里点「我已开通」。</div>
+    <div class="planNote">已开通的套餐：${untilText}。${pointsText ? `<b>${pointsText}</b> · ` : ''}开通套餐或充值积分后，回到这里点「我已开通」。</div>
   </section>
   <div class="row">
     <button class="go" id="btnPay" type="button">去订阅 · cm.66ai.biz/pay</button>
@@ -217,5 +217,6 @@ export const INTRO_PAGE_URL = pageUrl(introPage)
 export function paywallPageUrl(account = {}) {
   const username = String(account.username ?? '').replace(/[&<>"]/gu, '')
   const untilText = String(account.untilText ?? '暂无').replace(/[&<>"]/gu, '')
-  return pageUrl(paywallPage(username, untilText))
+  const pointsText = String(account.pointsText ?? '').replace(/[&<>"]/gu, '')
+  return pageUrl(paywallPage(username, untilText, pointsText))
 }

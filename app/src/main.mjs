@@ -2,7 +2,7 @@
 // The window loads the Host's loopback address as DSH Web does: DSH's sign-in sends the page's
 // origin as the address the browser comes back to, and accepts only a loopback one.
 import { app, BrowserWindow, WebContentsView, dialog, ipcMain, Menu, nativeImage, nativeTheme, powerMonitor, session, shell as electronShell, Tray } from 'electron'
-import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync, statSync, openSync, readSync, closeSync } from 'node:fs'
 import { readFile, rm } from 'node:fs/promises'
 import { release } from 'node:os'
 import { basename, dirname, isAbsolute, join, resolve } from 'node:path'
@@ -27,7 +27,7 @@ import { CHECK_PROFILE, PROFILE } from './profile.mjs'
 import { createShell, SHELL_TEXT } from './shell.mjs'
 import { UPDATE_TEXT, watchReleases, watchUpdates } from './updates.mjs'
 import { createDeferredPrompt } from './update-prompt.mjs'
-import { accountState, configureAccount, loginAccount, logoutAccount, planState, syncAccountPoints } from './auth.mjs'
+import { accountState, configureAccount, loginAccount, logoutAccount, planState, recordSpend, syncAccountPoints } from './auth.mjs'
 import { LOGIN_PAGE_URL } from './login-page.mjs'
 import { INTRO_PAGE_URL, paywallPageUrl } from './welcome-page.mjs'
 import { CAPTION_HEIGHT, cssColor, micaAvailable, nativeThemeSource } from './window-frame.mjs'
@@ -94,6 +94,9 @@ let downloadsBound = false
 // periodic balance sync.
 let accountGateResolve
 let accountSyncTimer
+// Whether the signed-in account passed the gate at its last check: the paywall
+// re-lock in refreshAccount fires only on the allowed → not-allowed edge.
+let sessionWasAllowed = true
 // Quitting while a first-run dialog is open stops the first run, and during the copy (of the
 // first run or of a data move) it waits for the copy to stop at a safe point, so that it leaves
 // no half team and no temporary copy.
@@ -407,14 +410,21 @@ const accountViewState = () => {
     : { authed: false }
 }
 
-// The subscription facts the paywall names: when the 66AI Bot plan runs out.
+// The subscription facts the paywall names: when the 66AI Bot plan runs out, and —
+// for a testing account (2026-11-20: registered users test on their points) — the
+// points left before the plans are asked for.
 function paywallText() {
   const state = accountState()
   const plan = state.plan ?? {}
   const untilText = (plan.subBotUntil || '') !== ''
     ? `66AI Bot 套餐至 ${plan.subBotUntil}`
     : '暂无'
-  return { username: state.username ?? '', untilText }
+  const pointsText = plan.mode === 'test'
+    ? `测试模式：每次请求扣 1 积分，剩余 ${Math.max(0, Number(plan.testPoints) || 0)} 积分`
+    : plan.mode === 'exhausted'
+      ? '测试积分已用完'
+      : ''
+  return { username: state.username ?? '', untilText, pointsText }
 }
 
 // The entitlements the cloud handed the signed-in account, parked where the Host's
@@ -486,7 +496,53 @@ async function refreshAccount() {
   const answer = await syncAccountPoints()
   if (!answer.ok && answer.network) return
   syncRelayKeyFile()
+  // A test account that ran out of points goes back to the paywall (2026-11-20):
+  // only on the allowed → not-allowed edge, and never over an open gate page.
+  const allowed = planState().allowed
+  if (!allowed && sessionWasAllowed && accountGateResolve === undefined) {
+    sessionWasAllowed = false
+    void mainWindow?.loadURL?.(paywallPageUrl(paywallText())).catch(() => {})
+  } else if (allowed) {
+    sessionWasAllowed = true
+  }
   mainWindow?.webContents?.send?.(IPC.accountChanged, accountViewState())
+}
+
+// Test-mode billing (2026-11-20): the Host's plugin appends one line per user
+// request (a chat message that reaches a model) to usage-ticks.local in the data
+// dir. The app polls the file with a byte offset, counts the new lines and reports
+// them as point spends; the sync right after pulls the balances back, so the
+// paywall returns as soon as the points are gone. The file only ever grows here
+// (the plugin may empty it; a shrinking file resets the offset).
+const USAGE_TICK_POLL_MS = 20_000
+let usageTickOffset = -1
+let usageTickTimer
+
+function pollUsageTicks() {
+  if (places === undefined) return
+  const file = join(places.dataDir, 'usage-ticks.local')
+  let size = 0
+  try { size = statSync(file).size } catch { size = 0 }
+  // The first poll starts from the file's end: ticks from a previous run are the
+  // last session's business, not this one's bill.
+  if (usageTickOffset < 0) { usageTickOffset = size; return }
+  if (size <= usageTickOffset) { usageTickOffset = size; return }
+  let handle
+  try {
+    handle = openSync(file, 'r')
+    const buffer = Buffer.alloc(size - usageTickOffset)
+    readSync(handle, buffer, 0, buffer.length, usageTickOffset)
+    usageTickOffset = size
+    const ticks = buffer.toString('utf8').split('\n').filter(line => line.trim() !== '').length
+    if (ticks > 0 && planState().allowed && planState().mode !== 'plan') {
+      recordSpend({ text: -ticks })
+      void refreshAccount()
+    }
+  } catch (error) {
+    console.error('66AI Bot: could not read the usage ticks', error)
+  } finally {
+    if (handle !== undefined) { try { closeSync(handle) } catch { /* already closed */ } }
+  }
 }
 
 function startAccountSync() {
@@ -496,6 +552,9 @@ function startAccountSync() {
   setTimeout(() => { void refreshAccount().catch((error) => { console.error(error) }) }, 4_000).unref?.()
   accountSyncTimer = setInterval(() => { void refreshAccount().catch((error) => { console.error(error) }) }, ACCOUNT_SYNC_INTERVAL_MS)
   accountSyncTimer.unref?.()
+  usageTickOffset = -1
+  usageTickTimer = setInterval(pollUsageTicks, USAGE_TICK_POLL_MS)
+  usageTickTimer.unref?.()
 }
 
 // The sign-in page is the app's own, so the sender check is the guard; the host

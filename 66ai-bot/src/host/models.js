@@ -39,6 +39,9 @@ export function install(rt) {
     if (!fresh && Date.now() - catalogCache.at < CATALOG_TTL_MS && catalogCache.value.length > 0) return catalogCache.value
     const entries = []
     for (const provider of ctx.llm.listProviders()) {
+      // 2026-11-20: the DeepSeek engine's own provider stays behind the scenes — the
+      // pickers only offer the 66ai provider and the services the user added.
+      if (provider.id === 'deepseek-official') continue
       let models = []
       try { models = await ctx.llm.listModels(provider.id) } catch { continue }
       for (const model of models) {
