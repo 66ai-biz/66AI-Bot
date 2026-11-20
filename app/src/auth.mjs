@@ -106,6 +106,8 @@ function accountOf(data) {
     subTextUntil: String(data?.sub_text_until ?? ''),
     subAnalysisUntil: String(data?.sub_analysis_until ?? ''),
     subBotUntil: String(data?.sub_aibot_until ?? ''),
+    // 2026-11-13: the 98-yuan basic plan lives in its own cloud column; older cloud builds omit it.
+    subBotLiteUntil: String(data?.sub_aibot_lite_until ?? ''),
     // undefined: the cloud said nothing (an older answer); '' : it said there is none.
     relayKey: typeof data?.relay_key === 'string' ? data.relay_key : undefined,
     // The agent slots the plan grants (the cloud computes them); undefined when unstated.
@@ -136,18 +138,21 @@ export function planState(account) {
   const subTextUntil = String(source?.subTextUntil ?? '')
   const subAnalysisUntil = String(source?.subAnalysisUntil ?? '')
   const subBotUntil = String(source?.subBotUntil ?? '')
+  const subBotLiteUntil = String(source?.subBotLiteUntil ?? '')
   const admin = source?.isAdmin === true
   if (typeof source?.username !== 'string' || source.username === '') {
-    return { allowed: false, admin, subBotUntil, subTextUntil, subAnalysisUntil }
+    return { allowed: false, admin, subBotUntil, subBotLiteUntil, subTextUntil, subAnalysisUntil }
   }
-  if (admin) return { allowed: true, admin, subBotUntil, subTextUntil, subAnalysisUntil }
+  if (admin) return { allowed: true, admin, subBotUntil, subBotLiteUntil, subTextUntil, subAnalysisUntil }
   const today = todayStamp()
   return {
-    // The app's gate is a subscribed 66AI Bot monthly plan (the cloud's sub_aibot);
-    // an administrator may use the app without one.
-    allowed: subBotUntil >= today,
+    // The app's gate is a subscribed 66AI Bot monthly plan — any of the three tiers
+    // (98 basic / 138 / 198 pro; the cloud stamps the 98 tier in sub_aibot_lite_until).
+    // An administrator may use the app without one.
+    allowed: subBotUntil >= today || subBotLiteUntil >= today,
     admin,
     subBotUntil,
+    subBotLiteUntil,
     subTextUntil,
     subAnalysisUntil,
   }
@@ -227,6 +232,7 @@ export async function syncAccountPoints() {
     subTextUntil: String(entry.sub_text_until ?? session.subTextUntil ?? ''),
     subAnalysisUntil: String(entry.sub_analysis_until ?? session.subAnalysisUntil ?? ''),
     subBotUntil: String(entry.sub_aibot_until ?? session.subBotUntil ?? ''),
+    subBotLiteUntil: String(entry.sub_aibot_lite_until ?? session.subBotLiteUntil ?? ''),
     ...(entry.relay_key === undefined ? {} : { relayKey: String(entry.relay_key) }),
     ...(entry.agent_slots === undefined ? {} : { agentSlots: Math.max(0, Math.trunc(Number(entry.agent_slots) || 0)) }),
     ...(entry.agent_slots_total === undefined ? {} : { agentSlotsTotal: Math.max(0, Math.trunc(Number(entry.agent_slots_total) || 0)) }),
