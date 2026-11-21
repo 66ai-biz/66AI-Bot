@@ -40,8 +40,10 @@ export function install(rt) {
     const entries = []
     for (const provider of ctx.llm.listProviders()) {
       // 2026-11-20: the DeepSeek engine's own provider stays behind the scenes — the
-      // pickers only offer the 66ai provider and the services the user added.
-      if (provider.id === 'deepseek-official') continue
+      // pickers only offer the 66ai provider and the services the user added. The
+      // packaged-app check borrows the provider to carry its mock model and asks for
+      // it back with AIBOT_SHOW_DSH_PROVIDER.
+      if (provider.id === 'deepseek-official' && process.env.AIBOT_SHOW_DSH_PROVIDER !== '1') continue
       let models = []
       try { models = await ctx.llm.listModels(provider.id) } catch { continue }
       for (const model of models) {

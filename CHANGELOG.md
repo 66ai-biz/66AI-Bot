@@ -4,6 +4,17 @@ All notable changes to 66AI Bot are listed here. The format follows [Keep a Chan
 
 ## [Unreleased]
 
+## [0.2.18] - 2026-11-21
+
+### Added
+
+- Registered accounts may try the app on their points: without a plan the sign-in lets you in while points remain, every user request that reaches a model costs 1 point (the Host's plugin ticks it, the desktop app bills it and refreshes the balance), and the paywall — naming the 98/138/198 plans and the top-up page — returns only when the points are gone. The cloud gateway hands such accounts a relay key and one Agent slot, and a short text pool falls back to the universal points.
+
+### Changed
+
+- New application icon across the installer, the executable and the tray, regenerated from a new source image.
+- The front end shows only 66AI: the DeepSeek engine's built-in provider stays out of the model pickers, its sign-in and API-key entries are gone, and all client copy (settings, Bot creation, folder and permission errors, translations) names 66AI.
+
 ## [0.2.17] - 2026-11-15
 
 ### Added

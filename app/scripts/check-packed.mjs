@@ -329,6 +329,9 @@ try {
   Object.assign(env, {
     AIBOT_HOME: join(work, 'home'), AIBOT_SHELL_DATA: join(work, 'shell'),
     CM_BASE_URL: 'http://127.0.0.1:1',
+    // The check borrows DSH's built-in provider to carry the mock model; the product
+    // hides it from the pickers unless a test asks for it back.
+    AIBOT_SHOW_DSH_PROVIDER: '1',
     DEEPSEEK_BASE_URL: modelUrl, DEEPSEEK_API_KEY: 'mock-key',
   })
   const app = spawn(packedApp, [`--remote-debugging-port=${String(port)}`, `--inspect=127.0.0.1:${String(mainPort)}`], { stdio: 'inherit', env })
