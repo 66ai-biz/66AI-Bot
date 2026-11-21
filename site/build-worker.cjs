@@ -1,8 +1,13 @@
 const fs = require('fs');
 let h = fs.readFileSync('index.html', 'utf8');
-const OLD = 'https://dl.66ai.biz/66ai-bot-0.2.5-win-x64.exe';
-const n = h.split(OLD).length - 1;
-h = h.split(OLD).join('https://dl.66ai.biz/download');
+// Normalize legacy download hosts to the canonical aibot.66ai.biz/download route.
+const CANONICAL = 'https://aibot.66ai.biz/download';
+const LEGACY = ['https://dl.66ai.biz/download', 'https://dl.66ai.biz/66ai-bot-0.2.5-win-x64.exe'];
+let n = 0;
+for (const legacy of LEGACY) {
+  n += h.split(legacy).length - 1;
+  h = h.split(legacy).join(CANONICAL);
+}
 fs.writeFileSync('index.html', h);
 console.log('links replaced:', n);
 
