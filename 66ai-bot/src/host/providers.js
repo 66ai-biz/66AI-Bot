@@ -22,9 +22,12 @@ const BUILTIN_PROVIDERS = [
     name: '66ai',
     api: 'openai-completions',
     baseURL: 'https://api.66ai.biz/v1',
+    // The model a fresh setup opens on. Listed second: the picker still shows the
+    // long-serving GLM 5.3 first, the default is a choice of its own.
+    defaultModel: 'Qwen3.8-27B',
     models: [
-      { id: 'Qwen3.8-Flash-Next', name: 'Qwen 3.8 Flash Next' },
       { id: 'z-ai/glm-5.3-flash', name: 'GLM 5.3' },
+      { id: 'Qwen3.8-27B', name: 'Qwen 3.8 27B' },
       { id: 'minimaxai/minimax-m3.1-flash', name: 'MiniMax M3.1' },
       { id: 'stepfun-ai/step-5-preview', name: 'Step 5' },
       { id: 'deepseek-ai/deepseek-v4.1-flash', name: 'DeepSeek V4.1' },
@@ -317,6 +320,12 @@ export function install(rt) {
   }
 
   Object.assign(rt, { keyRefs, missingKeys, providersView, setProviderKey, clearProviderKey, addProvider, discoverModels, removeProvider })
+
+  // The model a fresh setup opens on, before the user ever picks one (models.js reads
+  // this as the default when DSH's own profile default is unset). The first preset
+  // that names one wins.
+  const preset = BUILTIN_PROVIDERS.find(item => typeof item.defaultModel === 'string' && item.defaultModel !== '')
+  if (preset) rt.presetDefaultRef = `${preset.provider}/${preset.defaultModel}`
 
   // Land the presets as early as boot, so the first chat opens on a working model
   // instead of waiting for the providers page.

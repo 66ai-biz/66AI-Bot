@@ -75,10 +75,14 @@ export function install(rt) {
     const selection = ctx.get?.('agentDefaultModel')?.currentSelection?.()
     return selection?.provider && selection?.model ? `${selection.provider}/${selection.model}` : undefined
   }
-  // The profile default model of DSH, when it is served; else the first served model.
+  // The profile default model of DSH, when it is served; else the preset's own pick
+  // (a provider may name the model a fresh setup opens on, apart from list order);
+  // else the first served model.
   function pickDefault(entries) {
     const ref = defaultRef()
-    return entries.find(entry => entry.ref === ref)?.ref ?? entries[0]?.ref
+    return entries.find(entry => entry.ref === ref)?.ref
+      ?? entries.find(entry => entry.ref === rt.presetDefaultRef)?.ref
+      ?? entries[0]?.ref
   }
   const defaultModel = async () => pickDefault(await catalog())
 

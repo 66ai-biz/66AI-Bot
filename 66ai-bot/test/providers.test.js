@@ -240,7 +240,9 @@ test('the preset 66ai provider lands on a fresh setup, with the shipped key when
     assert.equal(preset.custom, true)
     assert.equal(preset.removable, true)
     assert.equal(preset.models.length, 7)
-    assert.equal(preset.models[0].ref, 'ai66/Qwen3.8-Flash-Next')
+    assert.equal(preset.models[0].ref, 'ai66/z-ai/glm-5.3-flash')
+    // The preset names the model a fresh setup opens on, apart from list order.
+    assert.equal(await rt.defaultModel(), 'ai66/Qwen3.8-27B')
     assert.deepEqual(preset.key, { configured: true, writable: true })
     assert.equal(store.AI66_API_KEY, 'sk-shipped')
     // Every preset model is usable without anyone typing a key.
