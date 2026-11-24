@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
 import { Arch } from 'electron-builder'
-import { archProblem, beforePack, officeRuntimeRequest } from '../scripts/before-pack.mjs'
+import { archProblem, beforePack, cleanOldPacks, officeRuntimeRequest } from '../scripts/before-pack.mjs'
 import { runtimeTarget } from '../scripts/prepare-runtime.mjs'
 
 test('a build for the architecture of this Node goes on', async () => {
@@ -37,6 +38,20 @@ test('a requested universal build stops before packing either architecture', asy
 
 test('electron-builder runs the check before it packs', () => {
   assert.match(readFileSync(new URL('../electron-builder.yml', import.meta.url), 'utf8'), /^beforePack: \.\/scripts\/before-pack\.mjs$/m)
+})
+
+test('a pack drops old installers but keeps the output it is writing now', async (t) => {
+  const appDir = mkdtempSync(join(tmpdir(), 'aibot-packs-'))
+  t.after(() => rmSync(appDir, { recursive: true, force: true }))
+  for (const dir of ['dist-pack11', 'dist-pack12', 'dist-pack19', 'build', 'dist-packy']) {
+    mkdirSync(join(appDir, dir))
+    writeFileSync(join(appDir, dir, 'marker.txt'), dir)
+  }
+  const removed = cleanOldPacks(appDir, join(appDir, 'dist-pack19'))
+  assert.deepEqual(removed.sort(), ['dist-pack11', 'dist-pack12'])
+  const left = (await import('node:fs')).readdirSync(appDir).sort()
+  assert.deepEqual(left, ['build', 'dist-pack19', 'dist-packy'])
+  assert.equal(cleanOldPacks(appDir, join(appDir, 'win-unpacked')).length, 0)
 })
 
 test('the Office payload goes next to the asar for a platform the lock pins', () => {
