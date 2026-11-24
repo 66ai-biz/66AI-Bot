@@ -23,6 +23,7 @@ const BUILTIN_PROVIDERS = [
     api: 'openai-completions',
     baseURL: 'https://api.66ai.biz/v1',
     models: [
+      { id: 'Qwen3.8-Flash-Next', name: 'Qwen 3.8 Flash Next' },
       { id: 'z-ai/glm-5.3-flash', name: 'GLM 5.3' },
       { id: 'minimaxai/minimax-m3.1-flash', name: 'MiniMax M3.1' },
       { id: 'stepfun-ai/step-5-preview', name: 'Step 5' },

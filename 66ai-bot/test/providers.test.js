@@ -239,15 +239,15 @@ test('the preset 66ai provider lands on a fresh setup, with the shipped key when
     assert.equal(preset.name, '66ai')
     assert.equal(preset.custom, true)
     assert.equal(preset.removable, true)
-    assert.equal(preset.models.length, 6)
-    assert.equal(preset.models[0].ref, 'ai66/z-ai/glm-5.3-flash')
+    assert.equal(preset.models.length, 7)
+    assert.equal(preset.models[0].ref, 'ai66/Qwen3.8-Flash-Next')
     assert.deepEqual(preset.key, { configured: true, writable: true })
     assert.equal(store.AI66_API_KEY, 'sk-shipped')
     // Every preset model is usable without anyone typing a key.
     assert.deepEqual(await needing(rt), [])
     // A second view does not duplicate or rewire the preset.
     const again = await rt.providersView()
-    assert.equal(row(again, 'ai66').models.length, 6)
+    assert.equal(row(again, 'ai66').models.length, 7)
     assert.deepEqual(await needing(rt), [])
   } finally {
     delete process.env.DSH_HOME
