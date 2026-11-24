@@ -4,6 +4,20 @@ All notable changes to 66AI Bot are listed here. The format follows [Keep a Chan
 
 ## [Unreleased]
 
+## [0.2.19] - 2026-11-24
+
+### Changed
+
+- Fresh setups open on Qwen 3.8 27B (verified live against the 66ai relay) while GLM 5.3 stays first in the picker: the factory default no longer has to be the first list entry, and the user's own choice still wins. The unserved Qwen 3.8 Flash Next was dropped from the preset.
+
+### Build
+
+- Every pack now clears stale `dist-pack*` output directories first, keeping only the current one, so old installers stop piling up; a directory that fails to delete (e.g. locked) is skipped without breaking the build.
+
+### Fixed
+
+- The website's download buttons point at `aibot.66ai.biz/download`; the retired `dl.66ai.biz` host no longer appears anywhere.
+
 ## [0.2.18] - 2026-11-21
 
 ### Added

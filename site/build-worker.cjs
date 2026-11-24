@@ -12,8 +12,8 @@ fs.writeFileSync('index.html', h);
 console.log('links replaced:', n);
 
 const html = fs.readFileSync('index.html', 'utf8');
-const DL_PROXY = 'https://gh-proxy.com/https://github.com/66ai-biz/66AI-Bot/releases/download/v0.2.18/66ai-bot-0.2.18-win-x64.exe';
-const DL_RAW = 'https://github.com/66ai-biz/66AI-Bot/releases/download/v0.2.18/66ai-bot-0.2.18-win-x64.exe';
+const DL_PROXY = 'https://gh-proxy.com/https://github.com/66ai-biz/66AI-Bot/releases/download/v0.2.19/66ai-bot-0.2.19-win-x64.exe';
+const DL_RAW = 'https://github.com/66ai-biz/66AI-Bot/releases/download/v0.2.19/66ai-bot-0.2.19-win-x64.exe';
 
 // Homepage screenshots: base64-embedded JPEGs served at /shots/N.jpg.
 const SHOTS = [1, 2, 3].map(i => fs.readFileSync(`shots/shot-${i}.jpg`).toString('base64'));
